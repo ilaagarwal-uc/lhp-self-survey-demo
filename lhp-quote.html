@@ -299,6 +299,7 @@ const I = {
   store:'<svg viewBox="0 0 24 24" fill="none" stroke="#6D3FF2" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5 12 3l9 4.5-9 4.5-9-4.5z"/><path d="M3 7.5V17l9 4.5 9-4.5V7.5"/><path d="M12 12v9.5"/></svg>',
   dining:'<svg viewBox="0 0 24 24" fill="none" stroke="#6D3FF2" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="12" r="5.5"/><path d="M4 3v6a2 2 0 002 2v10M6 3v8"/></svg>',
   trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2m2 0v14a1 1 0 01-1 1H6a1 1 0 01-1-1V6"/><path d="M10 11v6M14 11v6"/></svg>',
+  edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>',
   door:'<svg viewBox="0 0 24 24" fill="none" stroke="#6D3FF2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21V4a1 1 0 011-1h10a1 1 0 011 1v17"/><path d="M4 21h16"/><circle cx="14.5" cy="12" r="1" fill="#6D3FF2" stroke="none"/></svg>',
   window:'<svg viewBox="0 0 24 24" fill="none" stroke="#6D3FF2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="1"/><path d="M12 4v16M4 12h16"/></svg>',
   grill:'<svg viewBox="0 0 24 24" fill="none" stroke="#6D3FF2" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="1"/><path d="M9 4v16M14 4v16M4 9h16M4 14h16"/></svg>',
@@ -370,10 +371,8 @@ function quoteTotals(Q){
   const ext = Q.exterior;
   const exterior = (ext.enabled && ext.tier) ? ext.walls.length * RATES.exteriorPerTier[ext.tier] : 0;
   if(ext.enabled) ext.walls.forEach(w=>{ if(w.waterproofing){ wproof += RATES.waterproofingPerRoom; wproofN++; } if(w.repair){ damages += RATES.repairPerRoom; damagesN++; } });
-  const nWalls = (Q.scan && Q.scan.walls) || 45;
-  const bhkTxt = ` · <button data-act="q:report" style="border:0;background:none;padding:0;cursor:pointer;color:var(--purple);font-weight:700;font-size:inherit;text-decoration:underline;text-underline-offset:2px">${nWalls} walls</button>`;
   const categories = [
-    { key:'interior', label:`Interior painting${bhkTxt}`, sub:'2 coats premium emulsion · walls & ceilings · primer', amount:interior },
+    { key:'interior', label:`Interior painting`, sub:'2 coats premium emulsion · walls & ceilings · primer', amount:interior },
     { key:'exterior', label:'Exterior painting', sub:'Weatherproof exterior emulsion', amount:exterior },
     { key:'damages',  label: damagesN ? `Damage repair × ${damagesN} wall${damagesN>1?'s':''}` : 'Damage repair',  sub:'Crack-filling, plaster patch & surface prep', amount:damages, rec: damages===0 && !!(Q.detected && Q.detected.damage), why:'We detected a damaged wall. Painting over cracks and uneven plaster gives a patchy finish and the new paint can flake within months — repairing first ensures a smooth, long-lasting result.' },
     { key:'wproof',   label: wproofN ? `Waterproofing × ${wproofN} wall${wproofN>1?'s':''}` : 'Waterproofing',     sub:'Seepage treatment before painting', amount:wproof, rec: wproof===0 && !!(Q.detected && Q.detected.seepage), why:'We detected seepage. Untreated, moisture keeps pushing through the wall and the fresh paint bubbles and peels — and the paint warranty won\'t cover a wall with untreated seepage.' },
@@ -429,7 +428,8 @@ function bindActs(scope){ scope.querySelectorAll('[data-act]').forEach(b=> b.onc
 function summaryInner(){
   const t = quoteTotals(QUOTE);
   const cats = t.categories.map(c=>`<div class="q-cat"><span class="lab">${c.label}${c.rec?` <span style="font-size:10px;font-weight:700;color:var(--red,#E23B3B);background:#FDECEC;padding:2px 7px;border-radius:999px;white-space:nowrap">Highly recommended</span> <button data-act="q:why:${c.key}" style="border:0;background:none;cursor:pointer;color:var(--ink-3);font-size:13px;padding:0;vertical-align:middle" aria-label="Why this matters">ⓘ</button>`:''}${c.sub?`<span class="q-cat-sub">${c.sub}</span>`:''}${c.rec&&c.why?`<span id="why-${c.key}" style="display:none;font-size:11.5px;color:var(--ink-2);background:#FDECEC;border-radius:9px;padding:9px 11px;margin-top:7px;line-height:1.5">${c.why}</span>`:''}</span><span class="amt">${c.rec?`<button data-act="q:repairs:${c.key}" style="border:1.5px solid var(--purple);background:#fff;color:var(--purple);font-weight:700;font-size:12.5px;padding:5px 13px;border-radius:999px;cursor:pointer">Add</button>`:inr(c.amount)}</span></div>`).join('');
-  return `<div class="q-sum-top"><span class="q-sum-h" style="margin:0">Your quote</span><button class="q-sum-edit" data-act="q:editpaint">Change paint</button></div>
+  const nWalls = (QUOTE.scan && QUOTE.scan.walls) || 45;
+  return `<div class="q-sum-top"><span class="q-sum-h" style="margin:0">Your quote <button data-act="q:report" style="border:0;background:none;padding:0;cursor:pointer;color:var(--purple);font-weight:700;font-size:13px;text-decoration:underline;text-underline-offset:2px;vertical-align:middle">· ${nWalls} walls</button></span><button class="q-sum-edit" data-act="q:editpaint">Change paint</button></div>
     ${cats}
     <div class="q-div"></div>
     <div class="q-line q-full"><span class="lab">Full price</span><span class="amt">${inr(t.full)}</span></div>
@@ -472,7 +472,7 @@ function roomCardInner(r){
         <span style="color:var(--ink-3);font-size:18px">›</span>
       </button>`
     : `<button data-act="q:customize:${r.id}" style="width:100%;background:var(--bg-soft,#F8F8FA);border:1px dashed var(--line);border-radius:12px;padding:12px;cursor:pointer;color:var(--purple);font-weight:700;margin-top:10px">+ Add photos</button>`;
-  return `<div class="q-rhead"><span class="q-ic">${roomIcon(r.name)}</span><span class="q-rname">${r.name}</span><button class="q-del" data-act="q:delroom:${r.id}" aria-label="Remove ${r.name}">${I.trash}</button></div>
+  return `<div class="q-rhead"><span class="q-ic">${roomIcon(r.name)}</span><span class="q-rname">${r.name}</span><button class="q-del" data-act="q:customize:${r.id}" aria-label="Edit ${r.name}">${I.edit}</button><button class="q-del" data-act="q:delroom:${r.id}" aria-label="Remove ${r.name}">${I.trash}</button></div>
     <div class="q-chips">${chipsHtml(r)}</div>
     ${viewTile}
     <div class="q-acts">
@@ -618,7 +618,9 @@ function reportRoomCard(r){
   const all = [].concat(r.photos.walls, r.photos.door, r.photos.grill, r.photos.cabinet, r.photos.bathroom).filter(Boolean);
   const thumbs = all.slice(0,6).map(p=>`<img src="${p.src}" alt="" style="width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:10px;display:block">`).join('');
   return `<div class="q-room">
-    <div class="q-rhead"><span class="q-ic">${roomIcon(r.name)}</span><span class="q-rname">${r.name}</span></div>
+    <div class="q-rhead"><span class="q-ic">${roomIcon(r.name)}</span><span class="q-rname">${r.name}</span>
+      <button class="q-del" data-act="q:customize:${r.id}" aria-label="Edit ${r.name}">${I.edit}</button>
+      <button class="q-del" data-act="q:delroom:${r.id}" aria-label="Remove ${r.name}">${I.trash}</button></div>
     <div class="q-chips">${chipsHtml(r)}</div>
     ${all.length?`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:11px">${thumbs}</div>`:''}
   </div>`;
@@ -645,45 +647,70 @@ function doAddFix(key){
   const r = (info && info.room && roomById(info.room)) || QUOTE.rooms[0];
   if(r){ if(key === 'wproof') r.waterproofing = true; else r.repair = true; refreshSummary(); refreshRoomCard(r.id); refreshFooter(); }
 }
-/* "Repairs detected" bottom sheet — opened from the Add button on a recommended
-   seepage / damage line. Shows each detected issue with the room photo + Add. */
-function openRepairsSheet(){
-  if(document.getElementById('qRepairs')) return;
+/* "Repairs recommended" — identical layout to the in-flow repairs page, shown here
+   inside a bottom sheet. Stacked Seepage / Damage sections, each a heading + subhead
+   + a horizontal photo carousel with a per-image "Add …·₹" button, then an estimate
+   bar and a Continue button. */
+function repairGroups(){
   const det = QUOTE.detected || {};
-  const GRP = [
+  return [
     { key:'wproof', on:!!det.seepage, room:det.seepage && det.seepage.room, head:'Seepage detected', hc:'#2F86E0', tint:'#E7F1FC',
       ic:'<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>', sub:'Waterproofing — prevents paint peeling & future damp walls',
-      add:'Add waterproofing', price:RATES.waterproofingPerRoom, done:r=>r.waterproofing },
+      add:'Add waterproofing', price:RATES.waterproofingPerRoom, isOn:r=>r.waterproofing },
     { key:'damages', on:!!det.damage, room:det.damage && det.damage.room, head:'Damage detected', hc:'#E23B3B', tint:'#FDECEC',
       ic:'<path d="M12 4 3 20h18L12 4z"/><path d="M12 10v4M12 17h.01"/>', sub:'Wall repair — fixes cracks & uneven surfaces',
-      add:'Add wall repair', price:RATES.repairPerRoom, done:r=>r.repair },
+      add:'Add wall repair', price:RATES.repairPerRoom, isOn:r=>r.repair },
   ].filter(g=>g.on);
-  if(!GRP.length){ doAddFix('wproof'); return; }   // nothing flagged → just add the line
-  const secHtml = g => {
-    const r = g.room && roomById(g.room);
-    const img = r ? ((r.photos.walls[0] && r.photos.walls[0].src) || (r.photos.bathroom[0] && r.photos.bathroom[0].src) || '') : '';
-    const applied = r ? !!g.done(r) : false;
-    return `<div style="margin-bottom:16px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
-        <span style="width:26px;height:26px;border-radius:7px;flex:0 0 auto;background:${g.tint};color:${g.hc};display:inline-flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${g.ic}</svg></span>
-        <span style="font-weight:700;font-size:15px;color:${g.hc}">${g.head}</span>
-        ${r?`<span style="margin-left:auto;font-size:11.5px;color:var(--ink-3)">${r.name}</span>`:''}
-      </div>
-      <div style="font-size:12.5px;color:var(--ink-3);margin:0 2px 10px;line-height:1.4">${g.sub}</div>
-      ${img?`<img src="${img}" alt="${g.head}" style="width:100%;height:150px;object-fit:cover;border-radius:12px;display:block;margin-bottom:10px">`:''}
-      <button data-act="q:sheetadd:${g.key}" ${applied?'disabled':''} style="width:100%;font-weight:700;font-size:13.5px;padding:12px;border-radius:12px;border:1.5px solid var(--purple);cursor:pointer;color:${applied?'#fff':'var(--purple)'};background:${applied?'var(--purple)':'#fff'}">${applied?'✓ Added · '+inr(g.price):g.add+' · '+inr(g.price)}</button>
-    </div>`;
-  };
-  const ov=document.createElement('div'); ov.className='sheet-ov'; ov.id='qRepairs';
-  ov.innerHTML=`<div class="sheet" role="dialog" aria-label="Repairs detected">
-    <div class="sheet-grab"></div>
-    <div style="display:flex;align-items:center;gap:10px;margin:0 2px 4px">
-      <span style="width:34px;height:34px;border-radius:10px;flex:0 0 auto;background:#FDECEC;color:#E23B3B;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 3 20h18L12 4z"/><path d="M12 11v4M12 18h.01"/></svg></span>
-      <div><div style="font-size:18px;font-weight:700;color:#E23B3B">Repairs detected</div>
-      <div style="font-size:12px;color:var(--ink-3)">Recommended before painting for a lasting finish.</div></div>
+}
+function repairSectionHtml(g){
+  const r = g.room && roomById(g.room);
+  const photos = r ? (r.photos.walls.length ? r.photos.walls : r.photos.bathroom) : [];
+  const added = r ? !!g.isOn(r) : false;
+  const tiles = photos.map(p=>`<div style="position:relative;flex:0 0 auto;width:150px;border-radius:10px;overflow:hidden;background:#000">
+      ${r?`<span style="position:absolute;left:6px;top:6px;z-index:2;font:700 9.5px/1 var(--font);color:#fff;background:rgba(15,15,25,.6);padding:4px 7px;border-radius:6px">${r.name}</span>`:''}
+      <img src="${p.src}" alt="${g.head}" style="width:150px;height:120px;object-fit:cover;display:block">
+      <button data-act="q:sheetadd:${g.key}" style="position:absolute;left:6px;right:6px;bottom:6px;font:700 10.5px/1.25 var(--font);padding:7px 6px;border-radius:9px;border:0;cursor:pointer;background:#fff;color:${added?'#07794C':'var(--purple)'};box-shadow:0 3px 10px rgba(0,0,0,.4)">${added?'✓ Added':g.add} · ${inr(g.price)}</button>
+    </div>`).join('');
+  return `<div style="margin-bottom:18px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+      <span style="width:26px;height:26px;border-radius:7px;flex:0 0 auto;background:${g.tint};color:${g.hc};display:inline-flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${g.ic}</svg></span>
+      <span style="font-weight:700;font-size:15px;color:${g.hc}">${g.head}</span>
     </div>
-    <div style="margin-top:14px">${GRP.map(secHtml).join('')}</div>
-    <button class="confirm-cancel" data-act="q:closerepairs" style="width:100%;margin-top:2px">Done</button>
+    <div style="font-size:12.5px;color:var(--ink-3);margin:0 2px 10px;line-height:1.4">${g.sub}</div>
+    <div style="display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px">${tiles}</div>
+  </div>`;
+}
+function repairEst(groups){ return groups.reduce((s,g)=>{ const r=roomById(g.room); return s + (r && g.isOn(r) ? g.price : 0); }, 0); }
+function refreshRepairsSheet(){
+  const groups = repairGroups();
+  const secs = document.getElementById('dmgSecs'); if(secs) secs.innerHTML = groups.map(repairSectionHtml).join('');
+  const est = document.getElementById('dmgEst'); if(est) est.textContent = inr(repairEst(groups));
+  const ov = document.getElementById('qRepairs'); if(ov) bindActs(ov);
+}
+function openRepairsSheet(){
+  if(document.getElementById('qRepairs')) return;
+  const groups = repairGroups();
+  if(!groups.length){ doAddFix('wproof'); return; }   // nothing flagged → just add the line
+  const parts = [];
+  if(QUOTE.detected && QUOTE.detected.seepage) parts.push('1 seepage area');
+  if(QUOTE.detected && QUOTE.detected.damage)  parts.push('1 damaged wall');
+  const ov=document.createElement('div'); ov.className='sheet-ov'; ov.id='qRepairs';
+  ov.innerHTML=`<div class="sheet" role="dialog" aria-label="Repairs recommended">
+    <div class="sheet-grab"></div>
+    <div style="display:flex;gap:12px;margin-bottom:12px">
+      <span style="width:44px;height:44px;border-radius:12px;flex:0 0 auto;background:#FDECEC;color:#E23B3B;display:flex;align-items:center;justify-content:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 3 20h18L12 4z"/><path d="M12 11v4M12 18h.01"/></svg></span>
+      <div><div style="font-size:22px;font-weight:700;color:#E23B3B;letter-spacing:-.01em">Repairs recommended</div>
+        <div style="font-size:13px;color:var(--ink-2);margin-top:3px"><b>${parts.join(' · ')}</b> detected</div>
+        <div style="font-size:12.5px;color:var(--ink-3);margin-top:2px;line-height:1.4">Fixing these now will ensure a smooth, long-lasting paint finish.</div>
+      </div>
+    </div>
+    <div id="dmgSecs">${groups.map(repairSectionHtml).join('')}</div>
+    <div style="display:flex;align-items:center;gap:11px;background:var(--purple-tint,#EEE9FC);border-radius:14px;padding:12px 14px;margin-top:2px">
+      <span style="width:34px;height:34px;border-radius:50%;flex:0 0 auto;background:#fff;color:var(--purple);display:flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg></span>
+      <span style="flex:1"><span style="font-weight:700;font-size:13.5px">Estimated repair cost</span><span style="display:block;font-size:11.5px;color:var(--ink-3)">Review and add repairs before continuing.</span></span>
+      <b id="dmgEst" style="font-size:16px">${inr(repairEst(groups))}</b>
+    </div>
+    <button class="q-viewquote" data-act="q:closerepairs" style="margin-top:16px">Continue →</button>
   </div>`;
   document.body.appendChild(ov);
   ov.addEventListener('click', e=>{ if(e.target===ov) closeRepairsSheet(); });
@@ -1077,7 +1104,7 @@ function route(a){
   if(a==='q:closerepairs'){ closeRepairsSheet(); return; }
   if(a.startsWith('q:why:')){ const el = document.getElementById('why-' + a.slice(6)); if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none'; return; }
   if(a.startsWith('q:addfix:')){ doAddFix(a.slice(9)); return; }
-  if(a.startsWith('q:sheetadd:')){ const key = a.slice(11); doAddFix(key); const btn = document.querySelector('#qRepairs [data-act="q:sheetadd:' + key + '"]'); if(btn){ btn.disabled = true; btn.style.background = 'var(--purple)'; btn.style.color = '#fff'; btn.textContent = '✓ Added · ' + inr(key === 'wproof' ? RATES.waterproofingPerRoom : RATES.repairPerRoom); } return; }
+  if(a.startsWith('q:sheetadd:')){ doAddFix(a.slice(11)); refreshRepairsSheet(); return; }
   if(a.startsWith('qed:'))  return qEdit(a);
   if(a.startsWith('qext:')) return qExtEdit(a);
   if(a.startsWith('qg:'))   return qGlobal(a);
