@@ -293,6 +293,11 @@ const I = {
   bath:'<svg viewBox="0 0 24 24" fill="none" stroke="#6D3FF2" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12V6a2 2 0 012-2 2 2 0 012 2M3 12h18v3a4 4 0 01-4 4H7a4 4 0 01-4-4z"/></svg>',
   frame:'<svg viewBox="0 0 24 24" fill="none" stroke="#6D3FF2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V5a2 2 0 012-2h3M16 3h3a2 2 0 012 2v3M21 16v3a2 2 0 01-2 2h-3M8 21H5a2 2 0 01-2-2v-3"/></svg>',
   dot:'<svg viewBox="0 0 24 24" fill="none" stroke="#6D3FF2" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>',
+  balcony:'<svg viewBox="0 0 24 24" fill="none" stroke="#6D3FF2" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V11h18v10M3 11h18M8 21v-6M12 21v-6M16 21v-6M6 11V7a6 6 0 0112 0v4"/></svg>',
+  pooja:'<svg viewBox="0 0 24 24" fill="none" stroke="#6D3FF2" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1.6 2 2.6 3.3 2.6 4.9A2.6 2.6 0 0112 10.4a2.6 2.6 0 01-2.6-2.5C9.4 6.3 10.4 5 12 3z"/><path d="M4 14h16l-2 4.2A3 3 0 0115.3 20H8.7A3 3 0 016 18.2z"/></svg>',
+  study:'<svg viewBox="0 0 24 24" fill="none" stroke="#6D3FF2" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4a2 2 0 012-2h11v16H7a2 2 0 00-2 2z"/><path d="M5 20a2 2 0 012-2h11"/><path d="M9 6h5"/></svg>',
+  store:'<svg viewBox="0 0 24 24" fill="none" stroke="#6D3FF2" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5 12 3l9 4.5-9 4.5-9-4.5z"/><path d="M3 7.5V17l9 4.5 9-4.5V7.5"/><path d="M12 12v9.5"/></svg>',
+  dining:'<svg viewBox="0 0 24 24" fill="none" stroke="#6D3FF2" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="12" r="5.5"/><path d="M4 3v6a2 2 0 002 2v10M6 3v8"/></svg>',
   trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2m2 0v14a1 1 0 01-1 1H6a1 1 0 01-1-1V6"/><path d="M10 11v6M14 11v6"/></svg>',
   door:'<svg viewBox="0 0 24 24" fill="none" stroke="#6D3FF2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21V4a1 1 0 011-1h10a1 1 0 011 1v17"/><path d="M4 21h16"/><circle cx="14.5" cy="12" r="1" fill="#6D3FF2" stroke="none"/></svg>',
   window:'<svg viewBox="0 0 24 24" fill="none" stroke="#6D3FF2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="1"/><path d="M12 4v16M4 12h16"/></svg>',
@@ -301,10 +306,15 @@ const I = {
   home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 001 1h12a1 1 0 001-1V9.5"/><path d="M9.5 21v-6h5v6"/></svg>',
 };
 function roomIcon(name){
-  if(/^bedroom/i.test(name))       return I.bed;
-  if(/living|lounge|dining/i.test(name)) return I.sofa;
+  if(/^bedroom|bed\b|guest\s*room|master/i.test(name)) return I.bed;
+  if(/dining/i.test(name))         return I.dining;
+  if(/living|lounge|hall|drawing/i.test(name)) return I.sofa;
   if(/kitchen/i.test(name))        return I.kitchenIcon;
-  if(/bath/i.test(name))           return I.bath;
+  if(/bath|washroom|toilet|powder/i.test(name)) return I.bath;
+  if(/balcony|terrace|verandah|deck/i.test(name)) return I.balcony;
+  if(/pooja|puja|prayer|mandir|temple/i.test(name)) return I.pooja;
+  if(/study|office|work/i.test(name)) return I.study;
+  if(/store|storage|utility|closet/i.test(name)) return I.store;
   if(/exterior/i.test(name))       return I.frame;
   return I.dot;
 }
@@ -418,7 +428,7 @@ function bindActs(scope){ scope.querySelectorAll('[data-act]').forEach(b=> b.onc
 
 function summaryInner(){
   const t = quoteTotals(QUOTE);
-  const cats = t.categories.map(c=>`<div class="q-cat"><span class="lab">${c.label}${c.rec?` <span style="font-size:10px;font-weight:700;color:var(--red,#E23B3B);background:#FDECEC;padding:2px 7px;border-radius:999px;white-space:nowrap">Highly recommended</span> <button data-act="q:why:${c.key}" style="border:0;background:none;cursor:pointer;color:var(--ink-3);font-size:13px;padding:0;vertical-align:middle" aria-label="Why this matters">ⓘ</button>`:''}${c.sub?`<span class="q-cat-sub">${c.sub}</span>`:''}${c.rec&&c.why?`<span id="why-${c.key}" style="display:none;font-size:11.5px;color:var(--ink-2);background:#FDECEC;border-radius:9px;padding:9px 11px;margin-top:7px;line-height:1.5">${c.why}</span>`:''}</span><span class="amt">${c.rec?`<button data-act="q:addfix:${c.key}" style="border:1.5px solid var(--purple);background:#fff;color:var(--purple);font-weight:700;font-size:12.5px;padding:5px 13px;border-radius:999px;cursor:pointer">Add</button>`:inr(c.amount)}</span></div>`).join('');
+  const cats = t.categories.map(c=>`<div class="q-cat"><span class="lab">${c.label}${c.rec?` <span style="font-size:10px;font-weight:700;color:var(--red,#E23B3B);background:#FDECEC;padding:2px 7px;border-radius:999px;white-space:nowrap">Highly recommended</span> <button data-act="q:why:${c.key}" style="border:0;background:none;cursor:pointer;color:var(--ink-3);font-size:13px;padding:0;vertical-align:middle" aria-label="Why this matters">ⓘ</button>`:''}${c.sub?`<span class="q-cat-sub">${c.sub}</span>`:''}${c.rec&&c.why?`<span id="why-${c.key}" style="display:none;font-size:11.5px;color:var(--ink-2);background:#FDECEC;border-radius:9px;padding:9px 11px;margin-top:7px;line-height:1.5">${c.why}</span>`:''}</span><span class="amt">${c.rec?`<button data-act="q:repairs:${c.key}" style="border:1.5px solid var(--purple);background:#fff;color:var(--purple);font-weight:700;font-size:12.5px;padding:5px 13px;border-radius:999px;cursor:pointer">Add</button>`:inr(c.amount)}</span></div>`).join('');
   return `<div class="q-sum-top"><span class="q-sum-h" style="margin:0">Your quote</span><button class="q-sum-edit" data-act="q:editpaint">Change paint</button></div>
     ${cats}
     <div class="q-div"></div>
@@ -475,13 +485,13 @@ function addButtonsInner(){
 const AREA_TYPES = [
   { id:'bedroom',  label:'Bedroom',       icon:I.bed },
   { id:'living',   label:'Living Room',   icon:I.sofa },
-  { id:'dining',   label:'Dining area',   icon:I.sofa },
+  { id:'dining',   label:'Dining area',   icon:I.dining },
   { id:'kitchen',  label:'Kitchen',       icon:I.kitchenIcon },
   { id:'bathroom', label:'Bathroom',      icon:I.bath },
-  { id:'balcony',  label:'Balcony',       icon:I.dot },
-  { id:'pooja',    label:'Pooja room',    icon:I.dot },
-  { id:'study',    label:'Study',         icon:I.dot },
-  { id:'store',    label:'Store room',    icon:I.dot },
+  { id:'balcony',  label:'Balcony',       icon:I.balcony },
+  { id:'pooja',    label:'Pooja room',    icon:I.pooja },
+  { id:'study',    label:'Study',         icon:I.study },
+  { id:'store',    label:'Store room',    icon:I.store },
   { id:'exterior', label:'Exterior walls',icon:I.frame },
 ];
 function exteriorInner(){
@@ -628,6 +638,59 @@ function openFullReport(){
   bindActs(ov);
 }
 function closeFullReport(){ const el=document.getElementById('qReport'); if(el) el.remove(); }
+
+/* apply a detected fix (waterproofing / damage repair) to its detected room */
+function doAddFix(key){
+  const info = key === 'wproof' ? (QUOTE.detected && QUOTE.detected.seepage) : (QUOTE.detected && QUOTE.detected.damage);
+  const r = (info && info.room && roomById(info.room)) || QUOTE.rooms[0];
+  if(r){ if(key === 'wproof') r.waterproofing = true; else r.repair = true; refreshSummary(); refreshRoomCard(r.id); refreshFooter(); }
+}
+/* "Repairs detected" bottom sheet — opened from the Add button on a recommended
+   seepage / damage line. Shows each detected issue with the room photo + Add. */
+function openRepairsSheet(){
+  if(document.getElementById('qRepairs')) return;
+  const det = QUOTE.detected || {};
+  const GRP = [
+    { key:'wproof', on:!!det.seepage, room:det.seepage && det.seepage.room, head:'Seepage detected', hc:'#2F86E0', tint:'#E7F1FC',
+      ic:'<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>', sub:'Waterproofing — prevents paint peeling & future damp walls',
+      add:'Add waterproofing', price:RATES.waterproofingPerRoom, done:r=>r.waterproofing },
+    { key:'damages', on:!!det.damage, room:det.damage && det.damage.room, head:'Damage detected', hc:'#E23B3B', tint:'#FDECEC',
+      ic:'<path d="M12 4 3 20h18L12 4z"/><path d="M12 10v4M12 17h.01"/>', sub:'Wall repair — fixes cracks & uneven surfaces',
+      add:'Add wall repair', price:RATES.repairPerRoom, done:r=>r.repair },
+  ].filter(g=>g.on);
+  if(!GRP.length){ doAddFix('wproof'); return; }   // nothing flagged → just add the line
+  const secHtml = g => {
+    const r = g.room && roomById(g.room);
+    const img = r ? ((r.photos.walls[0] && r.photos.walls[0].src) || (r.photos.bathroom[0] && r.photos.bathroom[0].src) || '') : '';
+    const applied = r ? !!g.done(r) : false;
+    return `<div style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+        <span style="width:26px;height:26px;border-radius:7px;flex:0 0 auto;background:${g.tint};color:${g.hc};display:inline-flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${g.ic}</svg></span>
+        <span style="font-weight:700;font-size:15px;color:${g.hc}">${g.head}</span>
+        ${r?`<span style="margin-left:auto;font-size:11.5px;color:var(--ink-3)">${r.name}</span>`:''}
+      </div>
+      <div style="font-size:12.5px;color:var(--ink-3);margin:0 2px 10px;line-height:1.4">${g.sub}</div>
+      ${img?`<img src="${img}" alt="${g.head}" style="width:100%;height:150px;object-fit:cover;border-radius:12px;display:block;margin-bottom:10px">`:''}
+      <button data-act="q:sheetadd:${g.key}" ${applied?'disabled':''} style="width:100%;font-weight:700;font-size:13.5px;padding:12px;border-radius:12px;border:1.5px solid var(--purple);cursor:pointer;color:${applied?'#fff':'var(--purple)'};background:${applied?'var(--purple)':'#fff'}">${applied?'✓ Added · '+inr(g.price):g.add+' · '+inr(g.price)}</button>
+    </div>`;
+  };
+  const ov=document.createElement('div'); ov.className='sheet-ov'; ov.id='qRepairs';
+  ov.innerHTML=`<div class="sheet" role="dialog" aria-label="Repairs detected">
+    <div class="sheet-grab"></div>
+    <div style="display:flex;align-items:center;gap:10px;margin:0 2px 4px">
+      <span style="width:34px;height:34px;border-radius:10px;flex:0 0 auto;background:#FDECEC;color:#E23B3B;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 3 20h18L12 4z"/><path d="M12 11v4M12 18h.01"/></svg></span>
+      <div><div style="font-size:18px;font-weight:700;color:#E23B3B">Repairs detected</div>
+      <div style="font-size:12px;color:var(--ink-3)">Recommended before painting for a lasting finish.</div></div>
+    </div>
+    <div style="margin-top:14px">${GRP.map(secHtml).join('')}</div>
+    <button class="confirm-cancel" data-act="q:closerepairs" style="width:100%;margin-top:2px">Done</button>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', e=>{ if(e.target===ov) closeRepairsSheet(); });
+  bindActs(ov);
+  requestAnimationFrame(()=>ov.classList.add('open'));
+}
+function closeRepairsSheet(){ const s=document.getElementById('qRepairs'); if(s){ s.classList.remove('open'); setTimeout(()=>s.remove(),260); } }
 
 /* ═══════════════════════════════════════════════════════════════════════
    FULL-SCREEN EDITOR (options + pictures), live-commit
@@ -1010,8 +1073,11 @@ function closePreview(){ const el=document.getElementById('qPreview'); if(el) el
 function route(a){
   if(a==='q:report'){ openFullReport(); return; }
   if(a==='q:closereport'){ closeFullReport(); return; }
+  if(a.startsWith('q:repairs:')){ openRepairsSheet(a.slice(10)); return; }
+  if(a==='q:closerepairs'){ closeRepairsSheet(); return; }
   if(a.startsWith('q:why:')){ const el = document.getElementById('why-' + a.slice(6)); if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none'; return; }
-  if(a.startsWith('q:addfix:')){ const key = a.slice(9); const info = key === 'wproof' ? (QUOTE.detected && QUOTE.detected.seepage) : (QUOTE.detected && QUOTE.detected.damage); let r = (info && info.room && roomById(info.room)) || QUOTE.rooms[0]; if(r){ if(key === 'wproof') r.waterproofing = true; else r.repair = true; refreshSummary(); refreshRoomCard(r.id); refreshFooter(); } return; }
+  if(a.startsWith('q:addfix:')){ doAddFix(a.slice(9)); return; }
+  if(a.startsWith('q:sheetadd:')){ const key = a.slice(11); doAddFix(key); const btn = document.querySelector('#qRepairs [data-act="q:sheetadd:' + key + '"]'); if(btn){ btn.disabled = true; btn.style.background = 'var(--purple)'; btn.style.color = '#fff'; btn.textContent = '✓ Added · ' + inr(key === 'wproof' ? RATES.waterproofingPerRoom : RATES.repairPerRoom); } return; }
   if(a.startsWith('qed:'))  return qEdit(a);
   if(a.startsWith('qext:')) return qExtEdit(a);
   if(a.startsWith('qg:'))   return qGlobal(a);
