@@ -120,7 +120,7 @@ img,svg{display:block}
 .q-acts{display:flex;gap:9px}
 .q-btn{flex:1;padding:11px;border-radius:11px;font-weight:600;font-size:13.5px;border:1.5px solid var(--line);background:#fff;color:var(--ink)}
 .q-btn:active{transform:scale(.98)}
-.q-btn.primary{background:var(--purple);color:#fff;border-color:var(--purple);box-shadow:var(--shadow-btn)}
+.q-btn.primary{background:var(--purple-tint,#EEE9FC);color:var(--purple);border-color:var(--purple)}
 .q-addrow{display:flex;gap:9px;margin:14px 0 2px}
 .q-ext-add{flex:1;padding:14px;border-radius:14px;border:1.5px dashed #D3C6F2;background:#fff;color:var(--purple);font-weight:600;font-size:13.5px}
 .q-ext-add:active{background:var(--purple-tint)}
@@ -435,20 +435,20 @@ function thumbsHtml(r){
   return `<div class="q-thumbs" data-act="q:gallery:${r.id}">${shown}${more}</div>`;
 }
 function chipsHtml(r){
+  // one ticked chip per service selected for this room, with quantities
   const c = [];
-  // only show what IS covered (drop the inactive ✗ pills); ceiling removed from breakup
-  const on = (label, is)=> is ? `<span class="q-chip tc on">${label} <b>✓</b></span>` : '';
-  c.push(`<span class="q-chip">${r.walls?r.walls+' walls':'No walls'}</span>`);
-  c.push(on('Attached bath', r.bathroom));
-  c.push(on('Balcony', r.balcony));
-  c.push(on('Door polish', r.addons.door.qty>0));
-  c.push(on('Window polish', r.addons.window.qty>0));
-  c.push(on('Grill painting', r.addons.grill.qty>0));
-  c.push(on('Cabinet polish', r.addons.cabinet.qty>0));
-  c.push(on('Damage repair', r.repair));
-  c.push(on('Seepage treatment', r.waterproofing));
+  const tc = label => `<span class="q-chip tc on">${label} <b>✓</b></span>`;
+  c.push(tc(`${r.walls} wall${r.walls>1?'s':''}${r.ceiling?' + 1 ceiling':''} · Paint`));
+  if(r.waterproofing) c.push(tc('Waterproofing × 1'));
+  if(r.repair)        c.push(tc('Damage repair × 1'));
+  if(r.addons.door.qty>0)    c.push(tc(`Door paint × ${r.addons.door.qty}`));
+  if(r.addons.window.qty>0)  c.push(tc(`Window paint × ${r.addons.window.qty}`));
+  if(r.addons.grill.qty>0)   c.push(tc(`Grill paint × ${r.addons.grill.qty}`));
+  if(r.addons.cabinet.qty>0) c.push(tc(`Cabinet paint × ${r.addons.cabinet.qty}`));
+  if(r.bathroom) c.push(tc('Attached bathroom'));
+  if(r.balcony)  c.push(tc('Balcony'));
   if(r.flags.wallUndetected) c.push(`<span class="q-chip warn">⚠ Recapture a wall</span>`);
-  return c.filter(Boolean).join('');
+  return c.join('');
 }
 function roomCardInner(r){
   return `<div class="q-rhead"><span class="q-ic">${roomIcon(r.name)}</span><span class="q-rname">${r.name}</span><button class="q-del" data-act="q:delroom:${r.id}" aria-label="Remove ${r.name}">${I.trash}</button></div>
