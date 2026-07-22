@@ -734,7 +734,6 @@ function repairSectionHtml(g){
   const tiles = photos.map(p=>`<div style="position:relative;flex:0 0 auto;width:150px;border-radius:10px;overflow:hidden;background:#000">
       ${r?`<span style="position:absolute;left:6px;top:6px;z-index:2;font:700 9.5px/1 var(--font);color:#fff;background:rgba(15,15,25,.6);padding:4px 7px;border-radius:6px">${r.name}</span>`:''}
       <img src="${p.src}" alt="${g.head}" style="width:150px;height:120px;object-fit:cover;display:block">
-      <button data-act="q:sheetadd:${g.key}" style="position:absolute;left:5px;right:5px;bottom:6px;font:700 9.5px/1 var(--font);white-space:nowrap;letter-spacing:-.01em;padding:7px 4px;border-radius:9px;border:0;cursor:pointer;background:#fff;color:${added?'#07794C':'var(--purple)'};box-shadow:0 3px 10px rgba(0,0,0,.4)">${added?'✓ Added':g.add} · ${inr(g.price)}</button>
     </div>`).join('');
   return `<div style="margin-bottom:18px">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
@@ -743,6 +742,7 @@ function repairSectionHtml(g){
     </div>
     <div style="font-size:12.5px;color:var(--ink-3);margin:0 2px 10px;line-height:1.4">${g.sub}</div>
     <div style="display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px">${tiles}</div>
+    <button data-act="q:sheetadd:${g.key}" style="width:100%;margin-top:8px;font-weight:700;font-size:13.5px;padding:11px;border-radius:12px;border:1.5px solid var(--purple);cursor:pointer;color:${added?'#fff':'var(--purple)'};background:${added?'var(--purple)':'#fff'}">${added?'✓ Added · '+inr(g.price):g.add+' · '+inr(g.price)}</button>
   </div>`;
 }
 function repairEst(groups){ return groups.reduce((s,g)=>{ const r=roomById(g.room); return s + (r && g.isOn(r) ? g.price : 0); }, 0); }
