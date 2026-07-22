@@ -371,6 +371,12 @@ function quoteTotals(Q){
   const ext = Q.exterior;
   const exterior = (ext.enabled && ext.tier) ? ext.walls.length * RATES.exteriorPerTier[ext.tier] : 0;
   if(ext.enabled) ext.walls.forEach(w=>{ if(w.waterproofing){ wproof += RATES.waterproofingPerRoom; wproofN++; } if(w.repair){ damages += RATES.repairPerRoom; damagesN++; } });
+  // detected repairs added one-by-one from the repairs sheet (× each photo)
+  const _ri = Q._repairItems || [];
+  const aW = _ri.filter(x=>x.key==='wproof'  && x.added).length;
+  const aD = _ri.filter(x=>x.key==='damages' && x.added).length;
+  wproof  += aW * RATES.waterproofingPerRoom; wproofN  += aW;
+  damages += aD * RATES.repairPerRoom;        damagesN += aD;
   const categories = [
     { key:'interior', label:`Interior painting`, sub:'2 coats premium emulsion · walls & ceilings · primer', amount:interior },
     { key:'exterior', label:'Exterior painting', sub:'Weatherproof exterior emulsion', amount:exterior },
@@ -451,8 +457,10 @@ function chipsHtml(r){
   const c = [];
   const tc = label => `<span class="q-chip tc on">${label} <b>✓</b></span>`;
   c.push(tc(`${r.walls} wall${r.walls>1?'s':''}${r.ceiling?' + 1 ceiling':''} · Paint`));
-  if(r.waterproofing) c.push(tc('Waterproofing × 1'));
-  if(r.repair)        c.push(tc('Damage repair × 1'));
+  const wq = (r.waterproofing?1:0) + repairItemCount('wproof', r.id);
+  if(wq) c.push(tc('Waterproofing × ' + wq));
+  const dq = (r.repair?1:0) + repairItemCount('damages', r.id);
+  if(dq) c.push(tc('Damage repair × ' + dq));
   if(r.addons.door.qty>0)    c.push(tc(`Door paint × ${r.addons.door.qty}`));
   if(r.addons.window.qty>0)  c.push(tc(`Window paint × ${r.addons.window.qty}`));
   if(r.addons.grill.qty>0)   c.push(tc(`Grill paint × ${r.addons.grill.qty}`));
@@ -544,14 +552,13 @@ function processPromiseInner(){
     <div style="font-size:12px;color:var(--ink-3);margin:10px 2px 0;line-height:1.5">These commitments are part of your booking contract and printed on your invoice.</div>`;
 }
 function renderQuotePage(){
-  const rooms = QUOTE.rooms.map(r=>`<div class="q-room" id="qroom_${r.id}">${roomCardInner(r)}</div>`).join('');
   app().innerHTML = `
     <div class="topbar"><button class="back" data-act="q:back" aria-label="Back">${I.back}</button><h1>Your painting quote</h1><button class="badge-offer" data-act="q:contract">Your Contract</button></div>
     <div class="scroll" id="qscroll">
       <div class="q-summary" id="q-summary">${summaryInner()}</div>
       <div class="q-addrow" id="q-addrow">${addButtonsInner()}</div>
       <div class="sec-h2" id="q-rooms-sec" style="display:flex;align-items:center;gap:8px"><span class="home-badge" data-act="q:report" style="cursor:pointer">${I.home}</span>Your home, room by room<button data-act="q:report" style="margin-left:auto;border:0;background:none;padding:0;cursor:pointer;color:var(--purple);font-weight:700;font-size:13.5px;text-decoration:underline;text-underline-offset:2px">View</button></div>
-      <div id="q-rooms">${rooms}</div>
+      <div class="sec-h2" style="display:flex;align-items:center;gap:8px"><span class="q-ic" style="background:#EDE7F6;color:var(--purple);font-size:16px">✨</span>Add-ons — special price<button data-act="q:addons" style="margin-left:auto;border:0;background:none;padding:0;cursor:pointer;color:var(--purple);font-weight:700;font-size:13.5px;text-decoration:underline;text-underline-offset:2px">View</button></div>
       <button data-act="q:addons" style="width:100%;display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#F3EEFF,#EDE7F6);border:1.5px solid #D3C6F2;border-radius:14px;padding:14px;cursor:pointer;text-align:left;margin:2px 0 6px">
         <span style="width:38px;height:38px;border-radius:10px;flex:0 0 auto;background:#fff;color:var(--purple);display:flex;align-items:center;justify-content:center;font-size:18px">✨</span>
         <span style="flex:1"><span style="font-weight:700;font-size:14px;display:block;color:var(--ink)">Add doors, windows, grills &amp; cabinets</span><span style="font-size:12px;color:var(--purple);font-weight:700">Special on-site price →</span></span>
@@ -721,19 +728,32 @@ function repairGroups(){
   return [
     { key:'wproof', on:!!det.seepage, room:det.seepage && det.seepage.room, head:'Seepage detected', hc:'#2F86E0', tint:'#E7F1FC',
       ic:'<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>', sub:'Waterproofing — prevents paint peeling & future damp walls',
-      add:'Add waterproofing', price:RATES.waterproofingPerRoom, isOn:r=>r.waterproofing },
+      add:'Add waterproofing', price:RATES.waterproofingPerRoom },
     { key:'damages', on:!!det.damage, room:det.damage && det.damage.room, head:'Damage detected', hc:'#2F86E0', tint:'#E7F1FC',
       ic:'<path d="M12 4 3 20h18L12 4z"/><path d="M12 10v4M12 17h.01"/>', sub:'Wall repair — fixes cracks & uneven surfaces',
-      add:'Add wall repair', price:RATES.repairPerRoom, isOn:r=>r.repair },
+      add:'Add wall repair', price:RATES.repairPerRoom },
   ].filter(g=>g.on);
 }
+/* one addable item per detected-room photo, per group; cached so state persists */
+function repairItems(){
+  if(QUOTE._repairItems) return QUOTE._repairItems;
+  const items = [];
+  repairGroups().forEach(g=>{
+    const r = g.room && roomById(g.room);
+    const photos = r ? (r.photos.walls.length ? r.photos.walls : r.photos.bathroom) : [];
+    (photos.length ? photos : [{src:''}]).forEach(p=> items.push({ key:g.key, room:g.room, img:p.src, price:g.price, added:false }));
+  });
+  QUOTE._repairItems = items;
+  return items;
+}
+function repairItemCount(key, roomId){ return (QUOTE._repairItems||[]).filter(x=>x.key===key && x.room===roomId && x.added).length; }
 function repairSectionHtml(g){
   const r = g.room && roomById(g.room);
-  const photos = r ? (r.photos.walls.length ? r.photos.walls : r.photos.bathroom) : [];
-  const added = r ? !!g.isOn(r) : false;
-  const tiles = photos.map(p=>`<div style="position:relative;flex:0 0 auto;width:150px;border-radius:10px;overflow:hidden;background:#000">
+  const items = repairItems().map((it,idx)=>({it,idx})).filter(x=>x.it.key===g.key);
+  const tiles = items.map(({it,idx})=>`<div style="position:relative;flex:0 0 auto;width:150px;border-radius:10px;overflow:hidden;background:#000">
       ${r?`<span style="position:absolute;left:6px;top:6px;z-index:2;font:700 9.5px/1 var(--font);color:#fff;background:rgba(15,15,25,.6);padding:4px 7px;border-radius:6px">${r.name}</span>`:''}
-      <img src="${p.src}" alt="${g.head}" style="width:150px;height:120px;object-fit:cover;display:block">
+      <img src="${it.img}" alt="${g.head}" style="width:150px;height:120px;object-fit:cover;display:block">
+      <button data-act="q:repadd:${idx}" style="position:absolute;left:5px;right:5px;bottom:6px;font:700 9.5px/1 var(--font);white-space:nowrap;letter-spacing:-.01em;padding:7px 4px;border-radius:9px;border:0;cursor:pointer;background:#fff;color:${it.added?'#07794C':'var(--purple)'};box-shadow:0 3px 10px rgba(0,0,0,.4)">${it.added?'✓ Added':g.add} · ${inr(it.price)}</button>
     </div>`).join('');
   return `<div style="margin-bottom:18px">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
@@ -742,23 +762,24 @@ function repairSectionHtml(g){
     </div>
     <div style="font-size:12.5px;color:var(--ink-3);margin:0 2px 10px;line-height:1.4">${g.sub}</div>
     <div style="display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px">${tiles}</div>
-    <button data-act="q:sheetadd:${g.key}" style="width:100%;margin-top:8px;font-weight:700;font-size:13.5px;padding:11px;border-radius:12px;border:1.5px solid var(--purple);cursor:pointer;color:${added?'#fff':'var(--purple)'};background:${added?'var(--purple)':'#fff'}">${added?'✓ Added · '+inr(g.price):g.add+' · '+inr(g.price)}</button>
   </div>`;
 }
-function repairEst(groups){ return groups.reduce((s,g)=>{ const r=roomById(g.room); return s + (r && g.isOn(r) ? g.price : 0); }, 0); }
+function repairEst(){ return repairItems().filter(x=>x.added).reduce((s,x)=>s+x.price,0); }
 function refreshRepairsSheet(){
   const groups = repairGroups();
   const secs = document.getElementById('dmgSecs'); if(secs) secs.innerHTML = groups.map(repairSectionHtml).join('');
-  const est = document.getElementById('dmgEst'); if(est) est.textContent = inr(repairEst(groups));
+  const est = document.getElementById('dmgEst'); if(est) est.textContent = inr(repairEst());
   const ov = document.getElementById('qRepairs'); if(ov) bindActs(ov);
 }
 function openRepairsSheet(){
   if(document.getElementById('qRepairs')) return;
   const groups = repairGroups();
   if(!groups.length){ doAddFix('wproof'); return; }   // nothing flagged → just add the line
+  const items = repairItems();
+  const nSeep = items.filter(x=>x.key==='wproof').length, nDmg = items.filter(x=>x.key==='damages').length;
   const parts = [];
-  if(QUOTE.detected && QUOTE.detected.seepage) parts.push('1 seepage area');
-  if(QUOTE.detected && QUOTE.detected.damage)  parts.push('1 damaged wall');
+  if(nSeep) parts.push(nSeep + ' seepage area' + (nSeep>1?'s':''));
+  if(nDmg)  parts.push(nDmg + ' damaged wall' + (nDmg>1?'s':''));
   const ov=document.createElement('div'); ov.className='sheet-ov'; ov.id='qRepairs';
   ov.innerHTML=`<div class="sheet" role="dialog" aria-label="Repairs recommended">
     <div class="sheet-grab"></div>
@@ -773,7 +794,7 @@ function openRepairsSheet(){
     <div style="display:flex;align-items:center;gap:11px;background:var(--purple-tint,#EEE9FC);border-radius:14px;padding:12px 14px;margin-top:2px">
       <span style="width:34px;height:34px;border-radius:50%;flex:0 0 auto;background:#fff;color:var(--purple);display:flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg></span>
       <span style="flex:1"><span style="font-weight:700;font-size:13.5px">Estimated repair cost</span><span style="display:block;font-size:11.5px;color:var(--ink-3)">Review and add repairs before continuing.</span></span>
-      <b id="dmgEst" style="font-size:16px">${inr(repairEst(groups))}</b>
+      <b id="dmgEst" style="font-size:16px">${inr(repairEst())}</b>
     </div>
     <button class="q-viewquote" data-act="q:closerepairs" style="margin-top:16px">Continue →</button>
   </div>`;
@@ -1174,7 +1195,7 @@ function route(a){
   if(a==='q:closerepairs'){ closeRepairsSheet(); return; }
   if(a.startsWith('q:why:')){ const el = document.getElementById('why-' + a.slice(6)); if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none'; return; }
   if(a.startsWith('q:addfix:')){ doAddFix(a.slice(9)); return; }
-  if(a.startsWith('q:sheetadd:')){ doAddFix(a.slice(11)); refreshRepairsSheet(); return; }
+  if(a.startsWith('q:repadd:')){ const i=+a.slice(9); const items=repairItems(); if(items[i]) items[i].added=!items[i].added; refreshRepairsSheet(); refreshSummary(); refreshFooter(); return; }
   if(a.startsWith('qed:'))  return qEdit(a);
   if(a.startsWith('qext:')) return qExtEdit(a);
   if(a.startsWith('qg:'))   return qGlobal(a);
