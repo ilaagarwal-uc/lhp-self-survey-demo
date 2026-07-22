@@ -546,14 +546,13 @@ function processPromiseInner(){
 function renderQuotePage(){
   const rooms = QUOTE.rooms.map(r=>`<div class="q-room" id="qroom_${r.id}">${roomCardInner(r)}</div>`).join('');
   app().innerHTML = `
-    <div class="topbar"><button class="back" data-act="q:back" aria-label="Back">${I.back}</button><h1>Your painting quote</h1><span class="badge-offer">Save ₹1,500</span></div>
+    <div class="topbar"><button class="back" data-act="q:back" aria-label="Back">${I.back}</button><h1>Your painting quote</h1><button class="badge-offer" data-act="q:contract">Your Contract</button></div>
     <div class="scroll" id="qscroll">
       <div class="q-summary" id="q-summary">${summaryInner()}</div>
       <div class="q-addrow" id="q-addrow">${addButtonsInner()}</div>
       <div class="sec-h2" id="q-rooms-sec"><span class="home-badge" data-act="q:report" style="cursor:pointer">${I.home}</span>Your home, room by room</div>
       <div id="q-rooms">${rooms}</div>
       <div id="q-exterior">${exteriorInner()}</div>
-      ${processPromiseInner()}
     </div>
     <div class="q-foot" id="qfoot">${footInner()}</div>`;
   bindActs(app());
@@ -641,6 +640,25 @@ function openFullReport(){
 }
 function closeFullReport(){ const el=document.getElementById('qReport'); if(el) el.remove(); }
 
+/* "Your Contract" page — the UC promise, how long it takes, and the commitments
+   that are written into the booking contract. Opened from the topbar pill. */
+function openContract(){
+  if(document.getElementById('qContract')) return;
+  const ov=document.createElement('div'); ov.className='ov'; ov.id='qContract';
+  ov.innerHTML=`<div class="ov-top"><button class="ov-x" data-act="q:closecontract">${I.x}</button><span class="ov-title">Your Contract</span></div>
+    <div class="ov-scroll" style="padding:14px 16px 40px">
+      <div class="sec-h2" style="margin-top:2px">The UC promise</div>
+      <div style="background:var(--green-tint);border:1px solid #CDE8DC;border-radius:16px;padding:14px 15px;display:flex;gap:11px">
+        <span style="flex:0 0 auto;width:26px;height:26px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px">✓</span>
+        <span style="font-size:13.5px;line-height:1.55;color:var(--ink)"><b>AI analysis is accurate</b> — and re-verified by a UC painting expert before your call. If you still find anything off or incorrect, we'll change it in the scope during your consultation call. <b>Your bill changes only if the scope changes.</b></span>
+      </div>
+      ${processPromiseInner()}
+    </div>`;
+  document.body.appendChild(ov);
+  bindActs(ov);
+}
+function closeContract(){ const el=document.getElementById('qContract'); if(el) el.remove(); }
+
 /* apply a detected fix (waterproofing / damage repair) to its detected room */
 function doAddFix(key){
   const info = key === 'wproof' ? (QUOTE.detected && QUOTE.detected.seepage) : (QUOTE.detected && QUOTE.detected.damage);
@@ -657,7 +675,7 @@ function repairGroups(){
     { key:'wproof', on:!!det.seepage, room:det.seepage && det.seepage.room, head:'Seepage detected', hc:'#2F86E0', tint:'#E7F1FC',
       ic:'<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>', sub:'Waterproofing — prevents paint peeling & future damp walls',
       add:'Add waterproofing', price:RATES.waterproofingPerRoom, isOn:r=>r.waterproofing },
-    { key:'damages', on:!!det.damage, room:det.damage && det.damage.room, head:'Damage detected', hc:'#E23B3B', tint:'#FDECEC',
+    { key:'damages', on:!!det.damage, room:det.damage && det.damage.room, head:'Damage detected', hc:'#2F86E0', tint:'#E7F1FC',
       ic:'<path d="M12 4 3 20h18L12 4z"/><path d="M12 10v4M12 17h.01"/>', sub:'Wall repair — fixes cracks & uneven surfaces',
       add:'Add wall repair', price:RATES.repairPerRoom, isOn:r=>r.repair },
   ].filter(g=>g.on);
@@ -1100,6 +1118,8 @@ function closePreview(){ const el=document.getElementById('qPreview'); if(el) el
 function route(a){
   if(a==='q:report'){ openFullReport(); return; }
   if(a==='q:closereport'){ closeFullReport(); return; }
+  if(a==='q:contract'){ openContract(); return; }
+  if(a==='q:closecontract'){ closeContract(); return; }
   if(a.startsWith('q:repairs:')){ openRepairsSheet(a.slice(10)); return; }
   if(a==='q:closerepairs'){ closeRepairsSheet(); return; }
   if(a.startsWith('q:why:')){ const el = document.getElementById('why-' + a.slice(6)); if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none'; return; }
