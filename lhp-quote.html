@@ -370,7 +370,8 @@ function quoteTotals(Q){
     { key:'window',  label:`Window painting × ${akN.window}`, sub:'Enamel finish',        amount:akAmt.window },
     { key:'grill',   label:`Grill painting × ${akN.grill}`,   sub:'Metal enamel',         amount:akAmt.grill },
     { key:'cabinet', label:`Cabinet painting × ${akN.cabinet}`, sub:'Enamel / wood finish', amount:akAmt.cabinet },
-  ].filter(c => c.amount > 0 || c.rec || (c.key==='exterior' && Q.exterior.enabled));
+  ].filter(c => c.amount > 0 || c.rec || (c.key==='exterior' && Q.exterior.enabled))
+   .sort((a,b) => (a.rec?1:0) - (b.rec?1:0));   // not-yet-added (recommended) damage/waterproofing sink to the bottom
   const full = interior + exterior + damages + wproof + addons;
   const discount = Math.min(full, 1500);   // flat ₹1,500 off
   return { categories, full, discount, final: full - discount };
