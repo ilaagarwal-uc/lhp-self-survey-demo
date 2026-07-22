@@ -364,13 +364,13 @@ function quoteTotals(Q){
   const categories = [
     { key:'interior', label:`Interior painting${bhkTxt}`, sub:'2 coats premium emulsion · walls & ceilings · primer', amount:interior },
     { key:'exterior', label:'Exterior painting', sub:'Weatherproof exterior emulsion', amount:exterior },
-    { key:'damages',  label:`Damage repair × ${damagesN} wall${damagesN>1?'s':''}`,  sub:'Crack-filling, plaster patch & surface prep', amount:damages },
-    { key:'wproof',   label:`Waterproofing × ${wproofN} wall${wproofN>1?'s':''}`,     sub:'Seepage treatment before painting', amount:wproof },
+    { key:'damages',  label: damagesN ? `Damage repair × ${damagesN} wall${damagesN>1?'s':''}` : 'Damage repair',  sub:'Crack-filling, plaster patch & surface prep', amount:damages, rec: damages===0 && !!(Q.detected && Q.detected.damage), why:'We detected a damaged wall. Painting over cracks and uneven plaster gives a patchy finish and the new paint can flake within months — repairing first ensures a smooth, long-lasting result.' },
+    { key:'wproof',   label: wproofN ? `Waterproofing × ${wproofN} wall${wproofN>1?'s':''}` : 'Waterproofing',     sub:'Seepage treatment before painting', amount:wproof, rec: wproof===0 && !!(Q.detected && Q.detected.seepage), why:'We detected seepage. Untreated, moisture keeps pushing through the wall and the fresh paint bubbles and peels — and the paint warranty won\'t cover a wall with untreated seepage.' },
     { key:'door',    label:`Door painting × ${akN.door}`,     sub:'Enamel finish',        amount:akAmt.door },
     { key:'window',  label:`Window painting × ${akN.window}`, sub:'Enamel finish',        amount:akAmt.window },
     { key:'grill',   label:`Grill painting × ${akN.grill}`,   sub:'Metal enamel',         amount:akAmt.grill },
     { key:'cabinet', label:`Cabinet painting × ${akN.cabinet}`, sub:'Enamel / wood finish', amount:akAmt.cabinet },
-  ].filter(c => c.amount > 0 || (c.key==='exterior' && Q.exterior.enabled));
+  ].filter(c => c.amount > 0 || c.rec || (c.key==='exterior' && Q.exterior.enabled));
   const full = interior + exterior + damages + wproof + addons;
   const discount = Math.min(full, 1500);   // flat ₹1,500 off
   return { categories, full, discount, final: full - discount };
@@ -416,7 +416,7 @@ function bindActs(scope){ scope.querySelectorAll('[data-act]').forEach(b=> b.onc
 
 function summaryInner(){
   const t = quoteTotals(QUOTE);
-  const cats = t.categories.map(c=>`<div class="q-cat"><span class="lab">${c.label}${c.sub?`<span class="q-cat-sub">${c.sub}</span>`:''}</span><span class="amt">${inr(c.amount)}</span></div>`).join('');
+  const cats = t.categories.map(c=>`<div class="q-cat"><span class="lab">${c.label}${c.rec?` <span style="font-size:10px;font-weight:700;color:var(--red,#E23B3B);background:#FDECEC;padding:2px 7px;border-radius:999px;white-space:nowrap">Highly recommended</span> <button data-act="q:why:${c.key}" style="border:0;background:none;cursor:pointer;color:var(--ink-3);font-size:13px;padding:0;vertical-align:middle" aria-label="Why this matters">ⓘ</button>`:''}${c.sub?`<span class="q-cat-sub">${c.sub}</span>`:''}${c.rec&&c.why?`<span id="why-${c.key}" style="display:none;font-size:11.5px;color:var(--ink-2);background:#FDECEC;border-radius:9px;padding:9px 11px;margin-top:7px;line-height:1.5">${c.why}</span>`:''}</span><span class="amt">${inr(c.amount)}</span></div>`).join('');
   return `<div class="q-sum-top"><span class="q-sum-h" style="margin:0">Your quote</span><button class="q-sum-edit" data-act="q:editpaint">Change paint</button></div>
     ${cats}
     <div class="q-div"></div>
@@ -971,6 +971,7 @@ function closePreview(){ const el=document.getElementById('qPreview'); if(el) el
    DISPATCH
    ═══════════════════════════════════════════════════════════════════════ */
 function route(a){
+  if(a.startsWith('q:why:')){ const el = document.getElementById('why-' + a.slice(6)); if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none'; return; }
   if(a.startsWith('qed:'))  return qEdit(a);
   if(a.startsWith('qext:')) return qExtEdit(a);
   if(a.startsWith('qg:'))   return qGlobal(a);
@@ -1050,6 +1051,7 @@ function qPic(a){
     if(!s || !Array.isArray(s.rooms) || !s.rooms.length) return;
     if(s.bhk != null) QUOTE.bhk = s.bhk;
     if(s.discountPct != null) QUOTE.discountPct = s.discountPct;
+    if(s.detected) QUOTE.detected = s.detected;
     if(s.exterior) QUOTE.exterior = s.exterior;
     QUOTE.rooms = s.rooms;
     QUOTE.rooms.forEach(r => {                       // normalize like the mock seed does
