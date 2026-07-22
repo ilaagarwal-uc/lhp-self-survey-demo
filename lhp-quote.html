@@ -360,8 +360,8 @@ function quoteTotals(Q){
   const ext = Q.exterior;
   const exterior = (ext.enabled && ext.tier) ? ext.walls.length * RATES.exteriorPerTier[ext.tier] : 0;
   if(ext.enabled) ext.walls.forEach(w=>{ if(w.waterproofing){ wproof += RATES.waterproofingPerRoom; wproofN++; } if(w.repair){ damages += RATES.repairPerRoom; damagesN++; } });
-  const nWalls = (Q.scan && Q.scan.walls) || 45, nSpaces = (Q.scan && Q.scan.spaces) || 13;
-  const bhkTxt = ` · ${nWalls} walls · ${nSpaces} spaces`;
+  const nWalls = (Q.scan && Q.scan.walls) || 45;
+  const bhkTxt = ` · <button data-act="q:report" style="border:0;background:none;padding:0;cursor:pointer;color:var(--purple);font-weight:700;font-size:inherit;text-decoration:underline;text-underline-offset:2px">${nWalls} walls</button>`;
   const categories = [
     { key:'interior', label:`Interior painting${bhkTxt}`, sub:'2 coats premium emulsion · walls & ceilings · primer', amount:interior },
     { key:'exterior', label:'Exterior painting', sub:'Weatherproof exterior emulsion', amount:exterior },
@@ -540,7 +540,7 @@ function renderQuotePage(){
     <div class="scroll" id="qscroll">
       <div class="q-summary" id="q-summary">${summaryInner()}</div>
       <div class="q-addrow" id="q-addrow">${addButtonsInner()}</div>
-      <div class="sec-h2"><span class="home-badge">${I.home}</span>Your home, room by room</div>
+      <div class="sec-h2" id="q-rooms-sec"><span class="home-badge" data-act="q:report" style="cursor:pointer">${I.home}</span>Your home, room by room</div>
       <div id="q-rooms">${rooms}</div>
       <div id="q-exterior">${exteriorInner()}</div>
       ${processPromiseInner()}
@@ -549,7 +549,7 @@ function renderQuotePage(){
   bindActs(app());
 }
 /* targeted refreshes — never rewrite #qscroll, so scroll position is kept */
-function refreshSummary(){ const el=document.getElementById('q-summary'); if(el){ el.innerHTML=summaryInner(); } }
+function refreshSummary(){ const el=document.getElementById('q-summary'); if(el){ el.innerHTML=summaryInner(); bindActs(el); } }
 function refreshFooter(){ const el=document.getElementById('qfoot'); if(el){ el.innerHTML=footInner(); bindActs(el); } }
 function refreshRoomCard(id){ const el=document.getElementById('qroom_'+id); if(el){ el.innerHTML=roomCardInner(roomById(id)); bindActs(el); } }
 function refreshExterior(){ const el=document.getElementById('q-exterior'); if(el){ el.innerHTML=exteriorInner(); bindActs(el); } }
@@ -601,6 +601,33 @@ function openRoomGallery(id){
   bindActs(ov);
 }
 function closeRoomGallery(){ const el=document.getElementById('qGallery'); if(el) el.remove(); }
+
+/* Full "Your home, room by room" analysis — read-only room cards (icon, ticked
+   services, photo grid). Opened from the rotating home icon and the "45 walls" link. */
+function reportRoomCard(r){
+  const all = [].concat(r.photos.walls, r.photos.door, r.photos.grill, r.photos.cabinet, r.photos.bathroom).filter(Boolean);
+  const thumbs = all.slice(0,6).map(p=>`<img src="${p.src}" alt="" style="width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:10px;display:block">`).join('');
+  return `<div class="q-room">
+    <div class="q-rhead"><span class="q-ic">${roomIcon(r.name)}</span><span class="q-rname">${r.name}</span></div>
+    <div class="q-chips">${chipsHtml(r)}</div>
+    ${all.length?`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:11px">${thumbs}</div>`:''}
+  </div>`;
+}
+function openFullReport(){
+  if(document.getElementById('qReport')) return;
+  const nWalls = QUOTE.rooms.reduce((s,r)=>s+(r.walls||0),0);
+  const rooms = QUOTE.rooms.map(reportRoomCard).join('');
+  const ov = document.createElement('div');
+  ov.className='ov'; ov.id='qReport';
+  ov.innerHTML = `<div class="ov-top"><button class="ov-x" data-act="q:closereport">${I.x}</button><span class="ov-title"><span class="home-badge" style="width:26px;height:26px;margin-right:9px;vertical-align:middle">${I.home}</span>Your home, room by room</span></div>
+    <div class="ov-scroll" style="padding:14px 16px">
+      <div style="font-size:13px;color:var(--ink-3);margin:0 2px 14px;line-height:1.5">${nWalls} walls scanned &amp; analysed across ${QUOTE.rooms.length} rooms.</div>
+      ${rooms}
+    </div>`;
+  document.body.appendChild(ov);
+  bindActs(ov);
+}
+function closeFullReport(){ const el=document.getElementById('qReport'); if(el) el.remove(); }
 
 /* ═══════════════════════════════════════════════════════════════════════
    FULL-SCREEN EDITOR (options + pictures), live-commit
@@ -981,6 +1008,8 @@ function closePreview(){ const el=document.getElementById('qPreview'); if(el) el
    DISPATCH
    ═══════════════════════════════════════════════════════════════════════ */
 function route(a){
+  if(a==='q:report'){ openFullReport(); return; }
+  if(a==='q:closereport'){ closeFullReport(); return; }
   if(a.startsWith('q:why:')){ const el = document.getElementById('why-' + a.slice(6)); if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none'; return; }
   if(a.startsWith('q:addfix:')){ const key = a.slice(9); const info = key === 'wproof' ? (QUOTE.detected && QUOTE.detected.seepage) : (QUOTE.detected && QUOTE.detected.damage); let r = (info && info.room && roomById(info.room)) || QUOTE.rooms[0]; if(r){ if(key === 'wproof') r.waterproofing = true; else r.repair = true; refreshSummary(); refreshRoomCard(r.id); refreshFooter(); } return; }
   if(a.startsWith('qed:'))  return qEdit(a);
