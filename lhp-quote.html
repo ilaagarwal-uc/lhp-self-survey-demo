@@ -360,7 +360,8 @@ function quoteTotals(Q){
   const ext = Q.exterior;
   const exterior = (ext.enabled && ext.tier) ? ext.walls.length * RATES.exteriorPerTier[ext.tier] : 0;
   if(ext.enabled) ext.walls.forEach(w=>{ if(w.waterproofing){ wproof += RATES.waterproofingPerRoom; wproofN++; } if(w.repair){ damages += RATES.repairPerRoom; damagesN++; } });
-  const bhkTxt = Q.bhk ? ` · ${Q.bhk} BHK` : '';
+  const nWalls = (Q.scan && Q.scan.walls) || 45, nSpaces = (Q.scan && Q.scan.spaces) || 13;
+  const bhkTxt = ` · ${nWalls} walls · ${nSpaces} spaces`;
   const categories = [
     { key:'interior', label:`Interior painting${bhkTxt}`, sub:'2 coats premium emulsion · walls & ceilings · primer', amount:interior },
     { key:'exterior', label:'Exterior painting', sub:'Weatherproof exterior emulsion', amount:exterior },
