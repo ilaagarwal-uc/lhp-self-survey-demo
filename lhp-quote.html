@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Your painting quote</title>
+<!--
+  ═══════════════════════════════════════════════════════════════════════
+  LHP FINAL QUOTE · standalone page (mocked inputs)
+  ─────────────────────────────────────────────────────────────────────
+  A static quote page (not the chat flow). Price is itemised BY WORK
+  CATEGORY (interior / exterior / damages / waterproofing / add-ons),
+  then Full → Discount (25%) → Final. "Your home, room by room" is scope
+  only. Tap a room → photo GALLERY. Customize → full-screen EDITOR that
+  edits options AND pictures, with live pricing.
+
+  @integration: QUOTE is a mock seed here — in production it comes from the
+  cart + the capture pipeline. Photo capture uses a file input as a stand-in;
+  wall-detection (`detected`) would come from the vision service.
+  ═══════════════════════════════════════════════════════════════════════
+-->
+<style>
+:root{
+  --purple:#6D3FF2; --purple-dark:#5B2ED9; --purple-tint:#F3EEFE;
+  --green:#07794C; --green-tint:#EAF4EF; --red:#E23B3B;
+  --ink:#0F0F0F; --ink-2:#545454; --ink-3:#8A8A8A;
+  --line:#ECECEF; --line-soft:#F3F3F6;
+  --bg:#FFFFFF; --bg-soft:#F8F8FA;
+  --radius:14px;
+  --shadow-soft:0 4px 22px rgba(15,15,25,.055);
+  --shadow-btn:0 6px 16px rgba(109,63,242,.22);
+  --font:"Figtree",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:var(--font);color:var(--ink);background:#EDEDF0;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer;font-size:inherit}
+img,svg{display:block}
+
+#app{max-width:430px;height:100dvh;overflow:hidden;margin:0 auto;background:var(--bg);position:relative;
+     display:flex;flex-direction:column;box-shadow:0 0 60px rgba(0,0,0,.10)}
+.topbar{position:sticky;top:0;z-index:30;background:var(--bg);border-bottom:1px solid var(--line-soft);
+        display:flex;align-items:center;gap:10px;padding:14px 16px}
+.topbar .back{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-left:-4px}
+.topbar .back svg{width:20px;height:20px}
+.topbar .back:active{background:var(--bg-soft)}
+.topbar h1{font-size:16px;font-weight:700;letter-spacing:-.01em;flex:1}
+.badge-offer{font-size:11.5px;font-weight:700;color:#fff;background:var(--purple);padding:5px 10px;border-radius:999px;white-space:nowrap}
+.scroll{flex:1;overflow-y:auto;padding:16px 16px 120px}
+
+/* ── summary card ── */
+.q-summary{background:#fff;border:1px solid var(--line-soft);border-radius:18px;padding:16px 16px 18px;box-shadow:var(--shadow-soft)}
+.q-sum-h{font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);margin-bottom:12px}
+.q-sum-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.q-sum-edit{font-size:12.5px;font-weight:600;color:var(--purple);text-decoration:underline;text-underline-offset:3px}
+.gp-sub{font-size:13px;font-weight:600;color:var(--ink);margin:0 2px 8px}
+.gp-special{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 2px;border:0;border-bottom:1px solid var(--line-soft);background:none;font-weight:700;font-size:14px;color:var(--ink);text-align:left}
+.gp-special:active{opacity:.6}
+.q-cat{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:9px 0;font-size:14px}
+.q-cat .lab{color:var(--ink);font-weight:700}
+.q-cat-sub{display:block;font-size:11.5px;color:var(--ink-3);font-weight:600;line-height:1.4;margin-top:3px}
+.q-cat .amt{font-weight:700;font-variant-numeric:tabular-nums}
+.q-div{height:1px;background:var(--line);margin:11px 0}
+.q-line{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:3px 0;font-variant-numeric:tabular-nums}
+.q-full .amt{font-weight:700}
+.q-full .lab,.q-disc .lab{font-size:14px;color:var(--ink-2)}
+.q-disc{color:var(--green);background:var(--green-tint);border-radius:10px;padding:9px 11px;margin:6px 0}
+.q-disc .lab{font-size:14px;font-weight:600;color:var(--green)}
+.q-disc .amt{font-weight:600;color:var(--green)}
+.party{display:inline-block;transform-origin:center;animation:partySpin 2.4s cubic-bezier(.5,0,.5,1) infinite}
+@keyframes partySpin{
+  0%,68%{transform:rotate(0) scale(1)}
+  82%{transform:rotate(210deg) scale(1.3)}
+  100%{transform:rotate(360deg) scale(1)}
+}
+@media (prefers-reduced-motion:reduce){.party{animation:none}}
+.q-final{margin-top:9px;align-items:center}
+.q-final .lab{font-size:15px;font-weight:600}
+.q-final .amt{font-size:24px;font-weight:600;letter-spacing:-.02em}
+
+.sec-h2{font-size:18px;font-weight:600;letter-spacing:-.02em;margin:22px 2px 12px;display:flex;align-items:center;gap:9px}
+.home-badge{display:inline-flex;width:30px;height:30px;flex:none;border-radius:50%;background:var(--purple);align-items:center;justify-content:center;transform-origin:center;animation:homeSpin 3s ease-in-out infinite}
+.home-badge svg{width:16px;height:16px;stroke:#fff}
+@keyframes homeSpin{0%,72%{transform:rotate(0)}86%{transform:rotate(200deg)}100%{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.home-badge{animation:none}}
+
+/* ── room card ── */
+.q-room{background:#fff;border:1px solid var(--line-soft);border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:var(--shadow-soft)}
+.q-rhead{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+.q-ic{width:30px;height:30px;flex:none;border-radius:9px;background:var(--purple-tint);display:flex;align-items:center;justify-content:center}
+.q-ic svg{width:16px;height:16px}
+.q-rname{flex:1;font-size:15.5px;font-weight:600;letter-spacing:-.01em}
+.q-del{width:30px;height:30px;flex:none;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--ink-3)}
+.q-del svg{width:16px;height:16px}
+.q-del:active{background:var(--bg-soft);color:var(--red)}
+.q-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.q-chip{font-size:11.5px;font-weight:700;color:var(--ink-2);background:var(--bg-soft);border:1px solid var(--line);
+        padding:5px 9px;border-radius:999px;white-space:nowrap}
+.q-chip.tier{color:var(--purple);background:var(--purple-tint);border-color:#E3D9FB}
+.q-chip.muted{color:var(--ink-3)}
+.q-chip.warn{color:#fff;background:var(--red);border-color:var(--red)}
+.q-chip.tc.on b{color:var(--green)}
+.q-chip.tc.off{color:var(--ink-3)}
+.q-chip.tc.off b{color:var(--ink-3)}
+/* editor room-summary card */
+.rs-card{border:1px solid var(--line-soft);border-radius:12px;padding:2px 12px;background:var(--bg-soft)}
+.rs-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px;font-weight:600;color:var(--ink)}
+.rs-row:last-child{border-bottom:0}
+.rs-val{font-weight:700;color:var(--ink);white-space:nowrap}
+.rs-val.cost{color:var(--purple);font-weight:600}
+.q-thumbs{display:flex;gap:6px;overflow-x:auto;padding-bottom:3px;margin-bottom:12px;scrollbar-width:none}
+.q-thumbs::-webkit-scrollbar{display:none}
+.q-thumb{width:64px;height:64px;flex:none;border-radius:10px;overflow:hidden;background:var(--purple-tint);border:1.5px solid var(--line)}
+.q-thumb.bad{border-color:var(--red)}
+.q-thumb img{width:100%;height:100%;object-fit:cover}
+.q-more{width:64px;height:64px;flex:none;border-radius:10px;background:var(--bg-soft);border:1.5px dashed #D3C6F2;
+        display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;color:var(--purple)}
+.q-acts{display:flex;gap:9px}
+.q-btn{flex:1;padding:11px;border-radius:11px;font-weight:600;font-size:13.5px;border:1.5px solid var(--line);background:#fff;color:var(--ink)}
+.q-btn:active{transform:scale(.98)}
+.q-btn.primary{background:var(--purple);color:#fff;border-color:var(--purple);box-shadow:var(--shadow-btn)}
+.q-addrow{display:flex;gap:9px;margin:14px 0 2px}
+.q-ext-add{flex:1;padding:14px;border-radius:14px;border:1.5px dashed #D3C6F2;background:#fff;color:var(--purple);font-weight:600;font-size:13.5px}
+.q-ext-add:active{background:var(--purple-tint)}
+
+/* ── sticky footer ── */
+.q-close{text-align:center;font-size:14px;color:var(--ink-2);font-weight:700;margin:22px 2px 12px}
+.q-viewquote{width:100%;padding:15px;border-radius:14px;background:var(--purple);color:#fff;font-weight:600;font-size:15px;box-shadow:var(--shadow-btn)}
+.q-viewquote:active{background:var(--purple-dark)}
+.q-foot{position:absolute;left:0;right:0;bottom:0;z-index:20;max-width:430px;margin:0 auto;background:#fff;
+        border-top:1px solid var(--line);padding:12px 16px calc(14px + env(safe-area-inset-bottom));
+        display:flex;align-items:center;gap:12px}
+.q-foot .fsave{flex:1;font-size:12px;font-weight:700;color:var(--green)}
+.q-foot .fsave b{display:block;font-size:16px;color:var(--ink);font-weight:600}
+.q-cta{padding:13px 16px;border-radius:13px;background:var(--purple);color:#fff;font-weight:600;font-size:13.5px;box-shadow:var(--shadow-btn);white-space:nowrap}
+.q-cta:active{background:var(--purple-dark)}
+
+/* ── full-screen overlay (gallery + editor) ── */
+.ov{position:fixed;inset:0;z-index:80;max-width:430px;margin:0 auto;background:var(--bg);display:flex;flex-direction:column;animation:ovin .24s ease}
+@keyframes ovin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.ov-top{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--line-soft);display:flex;align-items:center;gap:10px;padding:14px 16px}
+.ov-x{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--bg-soft)}
+.ov-x svg{width:18px;height:18px}
+.ov-title{font-size:16px;font-weight:600;letter-spacing:-.01em;flex:1}
+.ov-scroll{flex:1;overflow-y:auto;padding:16px 16px 120px}
+
+.pcsub{font-size:11.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);margin:16px 2px 9px}
+.pcsub:first-child{margin-top:2px}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pcell{position:relative;aspect-ratio:1/1;border-radius:12px;overflow:hidden;background:var(--purple-tint);border:1.5px solid var(--line)}
+.pcell img{width:100%;height:100%;object-fit:cover}
+.pcell.empty{border-style:dashed;border-color:#D3C6F2;display:flex;align-items:center;justify-content:center;color:var(--purple);font-size:26px;font-weight:400}
+.pcell .pedit{position:absolute;right:5px;top:5px;width:22px;height:22px;border-radius:50%;background:rgba(15,15,15,.55);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px}
+/* wall-not-detected */
+.pcell.bad{border-color:var(--red)}
+.pcell.bad img{filter:brightness(.55) saturate(.85)}
+.warnov{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:8px;text-align:center;background:rgba(150,15,15,.30)}
+.warnov .ex{width:30px;height:30px;border-radius:50%;background:var(--red);color:#fff;font-weight:600;font-size:19px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,.35)}
+.warnov .wt{color:#fff;font-size:11px;font-weight:600;line-height:1.3;text-shadow:0 1px 5px rgba(0,0,0,.6)}
+.recap{margin-top:2px;font-size:10.5px;font-weight:600;color:var(--red);background:#fff;border-radius:999px;padding:5px 11px}
+
+/* ── editor controls ── */
+.ed-room-hd{font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);margin:4px 2px 10px}
+.ed-row{padding:13px 0;border-bottom:1px solid var(--line-soft)}
+.ed-row:last-of-type{border-bottom:0}
+.ed-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ed-lab{font-size:14.5px;font-weight:700}
+.ed-price{font-size:12.5px;font-weight:600;color:var(--purple);white-space:nowrap}
+.ed-price.zero{color:var(--ink-3)}
+.seg{display:inline-flex;border:1.5px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{padding:7px 16px;font-size:13px;font-weight:700;color:var(--ink-2)}
+.seg button.on{background:var(--purple);color:#fff}
+.stepper{display:inline-flex;align-items:center;gap:0;border:1.5px solid var(--line);border-radius:10px;overflow:hidden}
+.stepper button{width:36px;height:34px;font-size:19px;font-weight:700;color:var(--purple)}
+.stepper button:disabled{color:var(--line);cursor:default}
+.stepper .n{min-width:30px;text-align:center;font-weight:600;font-variant-numeric:tabular-nums}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:11px}
+.tile{border:1.5px solid var(--line);border-radius:12px;background:#fff;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center}
+.tile .tn{font-size:13px;font-weight:700}
+.tile .tp{font-size:12.5px;font-weight:600;color:var(--purple)}
+.tile.on{background:var(--purple);border-color:var(--purple)}
+.tile.on .tn,.tile.on .tp{color:#fff}
+.chiprow{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px}
+.pchip{padding:8px 13px;border-radius:10px;border:1.5px solid var(--line);background:#fff;font-weight:700;font-size:12.5px;color:var(--ink)}
+.pchip.on{background:var(--purple);color:#fff;border-color:var(--purple)}
+.pchip:disabled{opacity:.4}
+.ed-sub{font-size:12px;color:var(--ink-3);margin-top:3px}
+.ed-foot{position:absolute;left:0;right:0;bottom:0;max-width:430px;margin:0 auto;background:#fff;border-top:1px solid var(--line);
+         padding:12px 16px calc(14px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:12px}
+.ed-reset{font-size:13px;font-weight:600;color:var(--ink-3);text-decoration:underline;text-underline-offset:3px}
+.ed-total{flex:1;text-align:right;font-size:12px;color:var(--ink-3);font-weight:700}
+.ed-total b{display:block;font-size:18px;color:var(--ink);font-weight:600}
+.ed-done{padding:13px 24px;border-radius:12px;background:var(--purple);color:#fff;font-weight:600;font-size:15px;box-shadow:var(--shadow-btn)}
+/* add-area picker */
+.area-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.area-opt{display:flex;flex-direction:column;align-items:flex-start;gap:9px;padding:16px 14px;border:1.5px solid var(--line);border-radius:14px;background:#fff;text-align:left;font-weight:700;font-size:14px}
+.area-opt:active{background:var(--purple-tint);border-color:var(--purple)}
+.area-opt .ai{width:34px;height:34px;border-radius:9px;background:var(--purple-tint);display:flex;align-items:center;justify-content:center}
+.area-opt .ai svg{width:18px;height:18px}
+/* bottom sheet */
+.sheet-ov{position:fixed;inset:0;z-index:85;max-width:430px;margin:0 auto;display:flex;align-items:flex-end;background:rgba(15,15,20,.42);opacity:0;transition:opacity .25s ease}
+.sheet-ov.open{opacity:1}
+.sheet{width:100%;background:#fff;border-radius:22px 22px 0 0;padding:10px 18px calc(20px + env(safe-area-inset-bottom));
+  transform:translateY(100%);transition:transform .3s cubic-bezier(.22,.61,.36,1);max-height:82%;overflow-y:auto;box-shadow:0 -10px 40px rgba(0,0,0,.18)}
+.sheet-ov.open .sheet{transform:translateY(0)}
+.sheet-grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:2px auto 14px}
+.sheet-title{font-size:17px;font-weight:600;letter-spacing:-.01em;margin:0 2px 14px}
+.confirm-title{font-size:17px;font-weight:600;letter-spacing:-.01em;margin:4px 2px 6px}
+.confirm-sub{font-size:13px;color:var(--ink-2);margin-bottom:16px}
+.confirm-actions{display:flex;gap:10px}
+.confirm-cancel{flex:1;padding:13px;border-radius:12px;border:1.5px solid var(--line);background:#fff;font-weight:600;font-size:14px}
+.confirm-del{flex:1;padding:13px;border-radius:12px;border:0;background:var(--red);color:#fff;font-weight:600;font-size:14px}
+/* exterior per-wall cards */
+.ext-wall{border:1px solid var(--line-soft);border-radius:12px;padding:10px;margin-bottom:10px;display:flex;gap:10px}
+.ew-thumb{position:relative;width:66px;height:66px;flex:none;border-radius:9px;overflow:hidden;background:var(--purple-tint)}
+.ew-flag{position:absolute;left:3px;bottom:3px;font-size:8.5px;font-weight:600;color:#fff;background:rgba(226,59,59,.92);padding:2px 5px;border-radius:5px}
+.ew-clean{font-size:12px;color:var(--green);font-weight:700}
+.ew-thumb img{width:100%;height:100%;object-fit:cover}
+.ew-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:9px}
+.ew-hd{display:flex;align-items:center;gap:8px;font-size:14px}
+.ew-hd b{flex:1}
+.ew-price{font-size:12px;font-weight:600;color:var(--purple)}
+.ew-x{width:26px;height:26px;flex:none;border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--ink-3)}
+.ew-x svg{width:15px;height:15px}
+.ew-row{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;font-weight:600;color:var(--ink-2)}
+.ew-p2{font-size:11px;font-weight:600;color:var(--purple);margin-left:6px}
+.ew-lab{display:flex;flex-direction:column;font-weight:700;color:var(--ink)}
+.ew-lab em{font-style:normal;font-size:11px;color:var(--ink-3);font-weight:600;margin-top:1px}
+.det-lab{display:flex;align-items:center;gap:10px}
+.det-ic{width:30px;height:30px;flex:none;border-radius:8px;background:var(--purple-tint);display:flex;align-items:center;justify-content:center}
+.det-ic svg{width:17px;height:17px}
+.det-txt{display:flex;flex-direction:column;font-weight:700}
+.det-txt em{font-style:normal;font-size:11px;color:var(--ink-3);font-weight:600;margin-top:1px}
+.det-cta{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:11px;margin-bottom:8px;background:var(--bg-soft)}
+/* detection photo card (badge + floating add pill) */
+.dc{position:relative;border-radius:16px;overflow:hidden;margin-bottom:12px;background:var(--purple-tint)}
+.dc>img{width:100%;display:block;max-height:300px;object-fit:cover}
+.dc-badge{position:absolute;top:11px;left:11px;background:var(--red);color:#fff;font-weight:600;font-size:13px;padding:6px 12px;border-radius:11px;box-shadow:0 3px 10px rgba(0,0,0,.28)}
+.dc-add{position:absolute;left:11px;right:11px;bottom:11px;display:flex;align-items:center;gap:11px;background:#fff;border:1.5px solid #C7B8ED;border-radius:15px;padding:11px 14px;box-shadow:0 8px 22px rgba(0,0,0,.20)}
+.dc-add:active{transform:scale(.99)}
+.dc-add .dc-ic{width:34px;height:34px;flex:none;border-radius:50%;background:var(--purple-tint);display:flex;align-items:center;justify-content:center}
+.dc-add .dc-ic svg{width:18px;height:18px}
+.dc-add .dc-txt{display:flex;flex-direction:column;text-align:left;line-height:1.25;color:var(--purple)}
+.dc-add .dc-txt span{font-weight:600;font-size:15px}
+.dc-add .dc-txt b{font-weight:600;font-size:13px}
+.dc-add.on{background:var(--purple);border-color:var(--purple)}
+.dc-add.on .dc-txt{color:#fff}
+.dc-add.on .dc-ic{background:rgba(255,255,255,.22)}
+.fx-btn{width:100%;margin-top:8px;padding:12px;border-radius:11px;border:1.5px solid var(--purple);background:var(--purple-tint);color:var(--purple);font-weight:600;font-size:13.5px}
+.fx-btn:active{background:#EAE2FB}
+.fx-img{border-radius:12px;overflow:hidden;background:var(--purple-tint);margin-bottom:14px;min-height:120px;display:flex;align-items:center;justify-content:center}
+.fx-img img{width:100%;display:block}
+.fx-status{padding:34px 16px;color:var(--ink-3);font-weight:600;font-size:13px;text-align:center;line-height:1.5}
+@keyframes edIn{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){#qed-scroll>*{animation:none!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   PORTED CONSTANTS (from the main flow) + icons
+   ═══════════════════════════════════════════════════════════════════════ */
+function inr(n){ return '₹' + Math.round(n).toLocaleString('en-IN'); }
+const PAINT_TYPES = [
+  { id:'economy',     label:'Economy',      },
+  { id:'premium',     label:'Premium',      },
+  { id:'luxury',      label:'Luxury',       },
+  { id:'superluxury', label:'Super Luxury', },
+];
+function paintLabel(id){ const p = PAINT_TYPES.find(x=>x.id===id); return p ? p.label : id; }
+function defaultCeilingPaint(pt){ return (pt === 'luxury' || pt === 'superluxury') ? 'premium' : 'economy'; }
+
+/* enamel add-on prices — single source of truth (ported from SIM_ADDONS) */
+const SIM_ADDONS = [
+  { id:'balcony_grill', name:'Balcony grill',        price:1499, max:3 },
+  { id:'single_cab',    name:'Single-door cabinet',  price:1799, max:3 },
+  { id:'door',          name:'Door',                 price:2199, max:3 },
+  { id:'full_grill',    name:'Full-wall grill',      price:2999, max:3 },
+  { id:'double_cab',    name:'Double-door cabinet',  price:3199, max:3 },
+];
+function ADDON_PRICE(id){ const a = SIM_ADDONS.find(x=>x.id===id); return a ? a.price : 0; }
+function ADDON_NAME(id){ const a = SIM_ADDONS.find(x=>x.id===id); return a ? a.name : id; }
+
+const I = {
+  back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+  x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>',
+  bed:'<svg viewBox="0 0 24 24" fill="none" stroke="#6D3FF2" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a2 2 0 012-2h14a2 2 0 012 2v6M3 14h18M6 10V7a1 1 0 011-1h4a1 1 0 011 1v3"/></svg>',
+  sofa:'<svg viewBox="0 0 24 24" fill="none" stroke="#6D3FF2" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12V8a2 2 0 012-2h12a2 2 0 012 2v4M2 13a2 2 0 012 2v3M22 13a2 2 0 00-2 2v3M4 18h16M6 12h12"/></svg>',
+  kitchenIcon:'<svg viewBox="0 0 24 24" fill="none" stroke="#6D3FF2" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M4 9h16M9 3v6"/></svg>',
+  bath:'<svg viewBox="0 0 24 24" fill="none" stroke="#6D3FF2" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12V6a2 2 0 012-2 2 2 0 012 2M3 12h18v3a4 4 0 01-4 4H7a4 4 0 01-4-4z"/></svg>',
+  frame:'<svg viewBox="0 0 24 24" fill="none" stroke="#6D3FF2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V5a2 2 0 012-2h3M16 3h3a2 2 0 012 2v3M21 16v3a2 2 0 01-2 2h-3M8 21H5a2 2 0 01-2-2v-3"/></svg>',
+  dot:'<svg viewBox="0 0 24 24" fill="none" stroke="#6D3FF2" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>',
+  trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2m2 0v14a1 1 0 01-1 1H6a1 1 0 01-1-1V6"/><path d="M10 11v6M14 11v6"/></svg>',
+  door:'<svg viewBox="0 0 24 24" fill="none" stroke="#6D3FF2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21V4a1 1 0 011-1h10a1 1 0 011 1v17"/><path d="M4 21h16"/><circle cx="14.5" cy="12" r="1" fill="#6D3FF2" stroke="none"/></svg>',
+  window:'<svg viewBox="0 0 24 24" fill="none" stroke="#6D3FF2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="1"/><path d="M12 4v16M4 12h16"/></svg>',
+  grill:'<svg viewBox="0 0 24 24" fill="none" stroke="#6D3FF2" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="1"/><path d="M9 4v16M14 4v16M4 9h16M4 14h16"/></svg>',
+  cabinet:'<svg viewBox="0 0 24 24" fill="none" stroke="#6D3FF2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M12 3v18M8 8h1.5M14.5 8h1.5M8 15h1.5M14.5 15h1.5"/></svg>',
+  home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 001 1h12a1 1 0 001-1V9.5"/><path d="M9.5 21v-6h5v6"/></svg>',
+};
+function roomIcon(name){
+  if(/^bedroom/i.test(name))       return I.bed;
+  if(/living|lounge|dining/i.test(name)) return I.sofa;
+  if(/kitchen/i.test(name))        return I.kitchenIcon;
+  if(/bath/i.test(name))           return I.bath;
+  if(/exterior/i.test(name))       return I.frame;
+  return I.dot;
+}
+
+/* placeholder image (labelled) for add-on photos not captured yet */
+function ph(label, tint){
+  tint = tint || '#EDE7F6';
+  const svg = "<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'>"
+    + "<rect width='300' height='300' fill='"+tint+"'/>"
+    + "<text x='150' y='160' font-family='sans-serif' font-size='30' font-weight='700' fill='#6D3FF2' text-anchor='middle'>"+label+"</text></svg>";
+  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+}
+const W = (src,detected)=>({src,detected:detected!==false});   // wall/photo helper
+/* every painted photo (resized from the /painted folder) sits beside this file;
+   pick at random so all room/exterior slots pull real painted pictures. */
+const POOL = ['bd-1.jpg','bd-2.jpg','bd-3.jpg','bd-4.jpg','bd-5.jpg','bd2-1.jpg','bd2-2.jpg','bd2-3.jpg','bd2-4.jpg','living-1.jpg','kitchen-1.jpg','bath-1.jpg','door-1.jpg'];
+function randPool(){ return POOL[Math.floor(Math.random()*POOL.length)]; }
+function randPhotos(n){ return Array.from({length:n}, ()=>W(randPool())); }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PRICING — tunable rate card. @integration: real rates from backend.
+   Prices by ACTUAL per-room scope (not BHK×tier like the chat estimate).
+   ═══════════════════════════════════════════════════════════════════════ */
+const RATES = {
+  wallPerTier:    { economy:900,  premium:1300, luxury:1750, superluxury:2200 },
+  ceilingPerTier: { economy:1100, premium:1500, luxury:2000, superluxury:2500 },
+  repairPerRoom:        300,    // per room/wall (one SKU)
+  waterproofingPerRoom: 900,    // per room/wall (one SKU)
+  exteriorPerTier: { economy:1100, premium:1600, luxury:2100, superluxury:2600 },
+  bathroomPerRoom:      0,     // hook: attached bath is scope-only for now
+};
+function roomWallsAmount(r){ return r.walls * (RATES.wallPerTier[r.wallPaint]||0); }
+function roomCeilingAmount(r){ return r.ceiling ? (RATES.ceilingPerTier[r.ceilingPaint]||0) : 0; }
+/* items the vision service "finds" in the room photos → offer a treatment.
+   @integration: door/window/grill detection + real prices come from backend. */
+const DETECTED = [
+  { key:'door',   label:'Found door',   treat:'Add door enamel polish',  price:2199, icon:I.door },
+  { key:'window', label:'Found window', treat:'Add window enamel polish', price:1499, icon:I.window },
+  { key:'grill',  label:'Found grill',  treat:'Add grill painting',       price:900,  icon:I.grill },
+  { key:'cabinet',label:'Found cabinet',treat:'Add cabinet enamel polish',price:1799, icon:I.cabinet },
+];
+function roomAddonsAmount(r){ return DETECTED.reduce((s,d)=> s + ((r.addons[d.key] && r.addons[d.key].qty>0) ? d.price : 0), 0); }
+function quoteTotals(Q){
+  let interior=0, damages=0, wproof=0, damagesN=0, wproofN=0;
+  const akN = {door:0,window:0,grill:0,cabinet:0}, akAmt = {door:0,window:0,grill:0,cabinet:0};
+  Q.rooms.forEach(r=>{
+    interior += roomWallsAmount(r) + roomCeilingAmount(r);   // walls + ceiling
+    if(r.repair)        { damages += RATES.repairPerRoom; damagesN++; }
+    if(r.waterproofing) { wproof  += RATES.waterproofingPerRoom; wproofN++; }
+    DETECTED.forEach(d=>{ if(r.addons[d.key] && r.addons[d.key].qty>0){ akN[d.key]++; akAmt[d.key]+=d.price; } });
+  });
+  const addons = akAmt.door + akAmt.window + akAmt.grill + akAmt.cabinet;
+  const ext = Q.exterior;
+  const exterior = (ext.enabled && ext.tier) ? ext.walls.length * RATES.exteriorPerTier[ext.tier] : 0;
+  if(ext.enabled) ext.walls.forEach(w=>{ if(w.waterproofing){ wproof += RATES.waterproofingPerRoom; wproofN++; } if(w.repair){ damages += RATES.repairPerRoom; damagesN++; } });
+  const bhkTxt = Q.bhk ? ` · ${Q.bhk} BHK` : '';
+  const categories = [
+    { key:'interior', label:`Interior painting${bhkTxt}`, sub:'2 coats premium emulsion · walls & ceilings · primer', amount:interior },
+    { key:'exterior', label:'Exterior painting', sub:'Weatherproof exterior emulsion', amount:exterior },
+    { key:'damages',  label:`Damage repair × ${damagesN} wall${damagesN>1?'s':''}`,  sub:'Crack-filling, plaster patch & surface prep', amount:damages },
+    { key:'wproof',   label:`Waterproofing × ${wproofN} wall${wproofN>1?'s':''}`,     sub:'Seepage treatment before painting', amount:wproof },
+    { key:'door',    label:`Door painting × ${akN.door}`,     sub:'Enamel finish',        amount:akAmt.door },
+    { key:'window',  label:`Window painting × ${akN.window}`, sub:'Enamel finish',        amount:akAmt.window },
+    { key:'grill',   label:`Grill painting × ${akN.grill}`,   sub:'Metal enamel',         amount:akAmt.grill },
+    { key:'cabinet', label:`Cabinet painting × ${akN.cabinet}`, sub:'Enamel / wood finish', amount:akAmt.cabinet },
+  ].filter(c => c.amount > 0 || (c.key==='exterior' && Q.exterior.enabled));
+  const full = interior + exterior + damages + wproof + addons;
+  const discount = Math.min(full, 1500);   // flat ₹1,500 off
+  return { categories, full, discount, final: full - discount };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   MOCK QUOTE (seeded 2 BHK). @integration: comes from cart + capture pipeline.
+   ═══════════════════════════════════════════════════════════════════════ */
+const QUOTE = {
+  bhk:2, discountPct:0.25,
+  exterior:{ enabled:false, tier:null, walls:[] },   // walls: [{photo, waterproofing, repair}]
+  rooms:[
+    { id:'r1', name:'Bedroom 1', walls:4, ceiling:true, bathroom:true,
+      wallPaint:'premium', ceilingPaint:'economy', repair:false, waterproofing:false,
+      addons:{ door:{qty:1}, grill:{qty:0,variant:'balcony_grill'}, cabinet:{qty:0,variant:'single_cab'} },
+      photos:{ walls:[W(randPool()),W(randPool()),W(randPool(),false),W(randPool()),W(randPool())],
+               door:randPhotos(1), grill:[], cabinet:[], bathroom:randPhotos(1) }, flags:{} },
+    { id:'r2', name:'Bedroom 2', walls:4, ceiling:true, bathroom:false,
+      wallPaint:'premium', ceilingPaint:'economy', repair:false, waterproofing:false,
+      addons:{ door:{qty:0}, window:{qty:0}, grill:{qty:0}, cabinet:{qty:0} },
+      photos:{ walls:randPhotos(4), door:[], grill:[], cabinet:[], bathroom:[] }, flags:{} },
+    { id:'r3', name:'Living Room', walls:4, ceiling:true, bathroom:false,
+      wallPaint:'luxury', ceilingPaint:'premium', repair:true, waterproofing:false,
+      addons:{ door:{qty:0}, grill:{qty:1,variant:'full_grill'}, cabinet:{qty:0,variant:'single_cab'} },
+      photos:{ walls:randPhotos(3), door:[], grill:randPhotos(1), cabinet:[], bathroom:[] }, flags:{} },
+    { id:'r4', name:'Kitchen', walls:3, ceiling:true, bathroom:false,
+      wallPaint:'premium', ceilingPaint:'economy', repair:false, waterproofing:true,
+      addons:{ door:{qty:0}, grill:{qty:0,variant:'balcony_grill'}, cabinet:{qty:1,variant:'single_cab'} },
+      photos:{ walls:randPhotos(2), door:[], grill:[], cabinet:randPhotos(1), bathroom:[] }, flags:{} },
+  ],
+};
+QUOTE.rooms.forEach(r=>{ if(r.balcony===undefined) r.balcony=false;
+  const a=r.addons||{}; r.addons = { door:{qty:(a.door||{}).qty||0}, window:{qty:0}, grill:{qty:(a.grill||{}).qty||0}, cabinet:{qty:(a.cabinet||{}).qty||0} };
+  recomputeFlags(r); });
+function roomById(id){ return QUOTE.rooms.find(r=>r.id===id); }
+function recomputeFlags(r){ r.flags.wallUndetected = r.photos.walls.some(p=>p.detected===false); }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   RENDER — quote page
+   ═══════════════════════════════════════════════════════════════════════ */
+const app = () => document.getElementById('app');
+function bindActs(scope){ scope.querySelectorAll('[data-act]').forEach(b=> b.onclick = () => route(b.dataset.act)); }
+
+function summaryInner(){
+  const t = quoteTotals(QUOTE);
+  const cats = t.categories.map(c=>`<div class="q-cat"><span class="lab">${c.label}${c.sub?`<span class="q-cat-sub">${c.sub}</span>`:''}</span><span class="amt">${inr(c.amount)}</span></div>`).join('');
+  return `<div class="q-sum-top"><span class="q-sum-h" style="margin:0">Your quote</span><button class="q-sum-edit" data-act="q:editpaint">Change paint</button></div>
+    ${cats}
+    <div class="q-div"></div>
+    <div class="q-line q-full"><span class="lab">Full price</span><span class="amt">${inr(t.full)}</span></div>
+    <div class="q-line q-disc"><span class="lab"><span class="party">🎉</span> You save ${inr(t.discount)}</span><span class="amt">− ${inr(t.discount)}</span></div>
+    <div class="q-line q-final"><span class="lab">Final price</span><span class="amt">${inr(t.final)}</span></div>`;
+}
+function thumbsHtml(r){
+  const all = [].concat(
+    r.photos.walls.map(p=>({p,bad:p.detected===false})),
+    r.photos.door.map(p=>({p})), r.photos.grill.map(p=>({p})),
+    r.photos.cabinet.map(p=>({p})), r.photos.bathroom.map(p=>({p})));
+  if(!all.length) return `<div class="q-thumbs"><div class="q-more" data-act="q:customize:${r.id}">+ Add</div></div>`;
+  const shown = all.slice(0,5).map(x=>`<div class="q-thumb ${x.bad?'bad':''}"><img src="${x.p.src}" alt=""></div>`).join('');
+  const more = all.length>5 ? `<div class="q-more" data-act="q:gallery:${r.id}">+${all.length-5}</div>` : '';
+  return `<div class="q-thumbs" data-act="q:gallery:${r.id}">${shown}${more}</div>`;
+}
+function chipsHtml(r){
+  const c = [];
+  // only show what IS covered (drop the inactive ✗ pills); ceiling removed from breakup
+  const on = (label, is)=> is ? `<span class="q-chip tc on">${label} <b>✓</b></span>` : '';
+  c.push(`<span class="q-chip">${r.walls?r.walls+' walls':'No walls'}</span>`);
+  c.push(on('Attached bath', r.bathroom));
+  c.push(on('Balcony', r.balcony));
+  c.push(on('Door polish', r.addons.door.qty>0));
+  c.push(on('Window polish', r.addons.window.qty>0));
+  c.push(on('Grill painting', r.addons.grill.qty>0));
+  c.push(on('Cabinet polish', r.addons.cabinet.qty>0));
+  c.push(on('Damage repair', r.repair));
+  c.push(on('Seepage treatment', r.waterproofing));
+  if(r.flags.wallUndetected) c.push(`<span class="q-chip warn">⚠ Recapture a wall</span>`);
+  return c.filter(Boolean).join('');
+}
+function roomCardInner(r){
+  return `<div class="q-rhead"><span class="q-ic">${roomIcon(r.name)}</span><span class="q-rname">${r.name}</span><button class="q-del" data-act="q:delroom:${r.id}" aria-label="Remove ${r.name}">${I.trash}</button></div>
+    <div class="q-chips">${chipsHtml(r)}</div>
+    ${thumbsHtml(r)}
+    <div class="q-acts">
+      <button class="q-btn" data-act="q:gallery:${r.id}">View photos</button>
+      <button class="q-btn primary" data-act="q:customize:${r.id}">Customize</button>
+    </div>`;
+}
+function addButtonsInner(){
+  return `<button class="q-ext-add" data-act="q:addarea">+ Add another room / exterior area</button>`;
+}
+const AREA_TYPES = [
+  { id:'bedroom',  label:'Bedroom',       icon:I.bed },
+  { id:'living',   label:'Living Room',   icon:I.sofa },
+  { id:'dining',   label:'Dining area',   icon:I.sofa },
+  { id:'kitchen',  label:'Kitchen',       icon:I.kitchenIcon },
+  { id:'bathroom', label:'Bathroom',      icon:I.bath },
+  { id:'balcony',  label:'Balcony',       icon:I.dot },
+  { id:'pooja',    label:'Pooja room',    icon:I.dot },
+  { id:'study',    label:'Study',         icon:I.dot },
+  { id:'store',    label:'Store room',    icon:I.dot },
+  { id:'exterior', label:'Exterior walls',icon:I.frame },
+];
+function exteriorInner(){
+  const e = QUOTE.exterior;
+  if(!e.enabled) return '';
+  return `<div class="q-room" id="q-exterior-card">
+    <div class="q-rhead"><span class="q-ic">${I.frame}</span><span class="q-rname">Exterior</span></div>
+    <div class="q-chips">
+      <span class="q-chip">${e.walls.length} walls</span>
+      ${e.tier ? `<span class="q-chip tier">${paintLabel(e.tier)}</span>` : `<span class="q-chip muted">Select paint</span>`}
+      ${e.walls.some(w=>w.waterproofing)?`<span class="q-chip">Waterproofing</span>`:''}
+      ${e.walls.some(w=>w.repair)?`<span class="q-chip">Repair</span>`:''}
+    </div>
+    <div class="q-acts">
+      <button class="q-btn" data-act="q:extoggle">Remove</button>
+      <button class="q-btn primary" data-act="q:extedit">Customize</button>
+    </div></div>`;
+}
+function footInner(){
+  const t = quoteTotals(QUOTE);
+  return `<div class="fsave">You save ${inr(t.discount)}<b>${inr(t.final)}</b></div>
+    <button class="q-cta" data-act="q:book">Talk to UC for priority slot</button>`;
+}
+/* Post-quote clarity: what happens next, how long, and UC's promise. */
+function processPromiseInner(){
+  const step = (t, d) => `<div style="display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--line-soft)">
+      <span style="flex:0 0 auto;width:9px;height:9px;border-radius:50%;background:var(--purple);margin-top:6px"></span>
+      <span><span style="font-weight:700;font-size:14px">${t}</span><span style="display:block;color:var(--ink-3);font-size:12.5px;margin-top:2px;line-height:1.45">${d}</span></span>
+    </div>`;
+  const commit = (n, t, d) => `<div style="display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--line-soft)">
+      <span style="flex:0 0 auto;width:24px;height:24px;border-radius:7px;background:var(--purple-tint);color:var(--purple);font-weight:600;font-size:12px;display:flex;align-items:center;justify-content:center">${n}</span>
+      <span><span style="font-weight:700;font-size:14px">${t}</span><span style="display:block;color:var(--ink-3);font-size:12.5px;margin-top:2px;line-height:1.45">${d}</span></span>
+    </div>`;
+  return `<div class="sec-h2" style="margin-top:22px">How the 7 days will go</div>
+    <div style="background:#fff;border:1px solid var(--line);border-radius:16px;padding:6px 16px 8px">
+      ${step('Day 1 — Walkthrough &amp; prep', "Your head painter walks the plan with you room by room — confirms colours, accent walls and masking. Furniture covering begins. Your price doesn't change.")}
+      ${step('Day 2 — Surface work', 'Putty, sanding, seepage / POP repair (if opted).')}
+      ${step('Days 3–6 — Priming &amp; painting', 'Room by room, so your home stays livable. Bedrooms first, living area last.')}
+      ${step('Day 7 — Walkthrough &amp; handover', 'Deep cleanup, touch-ups with you present, warranty card issued. Balance payment only after you sign off.')}
+    </div>
+    <div class="sec-h2" style="margin-top:22px">Our commitments — part of your contract</div>
+    <div style="background:#fff;border:1px solid var(--line);border-radius:16px;padding:6px 16px 8px">
+      ${commit('01', 'Fixed price', 'The price in this proposal is written into your invoice before work begins. No re-measurement, no on-site revision.')}
+      ${commit('02', 'Scope corrections', 'Anything off is corrected on your consultation call. Every change is itemised and re-shared in writing before Day 1. Your bill changes only if the scope changes.')}
+      ${commit('03', 'Hidden damage', "If moving furniture reveals damage the photos couldn't show, you get photographs and its fixed price in the app. No extra work happens without your written approval.")}
+      ${commit('04', 'Warranty', '1 year against peeling, flaking and blistering on every wall we paint, issued as a warranty card at handover.')}
+      ${commit('05', 'Payment', '10% to book, fully refundable till Day 1. The remaining 90% stays with you until you sign off the final walkthrough. All payments through the UC app — never cash to the team.')}
+      ${commit('06', 'Painting team', 'A head painter leads the job and is on site all days, with trained, background-verified painters. Their ID-verified profiles are shared with you before Day 1.')}
+    </div>
+    <div style="font-size:12px;color:var(--ink-3);margin:10px 2px 0;line-height:1.5">These commitments are part of your booking contract and printed on your invoice.</div>`;
+}
+function renderQuotePage(){
+  const rooms = QUOTE.rooms.map(r=>`<div class="q-room" id="qroom_${r.id}">${roomCardInner(r)}</div>`).join('');
+  app().innerHTML = `
+    <div class="topbar"><button class="back" data-act="q:back" aria-label="Back">${I.back}</button><h1>Your painting quote</h1><span class="badge-offer">Save ₹1,500</span></div>
+    <div class="scroll" id="qscroll">
+      <div class="q-summary" id="q-summary">${summaryInner()}</div>
+      <div class="q-addrow" id="q-addrow">${addButtonsInner()}</div>
+      <div class="sec-h2"><span class="home-badge">${I.home}</span>Your home, room by room</div>
+      <div id="q-rooms">${rooms}</div>
+      <div id="q-exterior">${exteriorInner()}</div>
+      ${processPromiseInner()}
+    </div>
+    <div class="q-foot" id="qfoot">${footInner()}</div>`;
+  bindActs(app());
+}
+/* targeted refreshes — never rewrite #qscroll, so scroll position is kept */
+function refreshSummary(){ const el=document.getElementById('q-summary'); if(el){ el.innerHTML=summaryInner(); } }
+function refreshFooter(){ const el=document.getElementById('qfoot'); if(el){ el.innerHTML=footInner(); bindActs(el); } }
+function refreshRoomCard(id){ const el=document.getElementById('qroom_'+id); if(el){ el.innerHTML=roomCardInner(roomById(id)); bindActs(el); } }
+function refreshExterior(){ const el=document.getElementById('q-exterior'); if(el){ el.innerHTML=exteriorInner(); bindActs(el); } }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   MUTATION CHOKE-POINT + live re-render
+   ═══════════════════════════════════════════════════════════════════════ */
+let editingRoomId = null, editingExterior = false, qEditorOpen = false, _snapshot = null;
+function applyEdit(fn){
+  fn(QUOTE);
+  if(editingRoomId) recomputeFlags(roomById(editingRoomId));
+  refreshSummary(); refreshFooter();
+  if(editingRoomId) refreshRoomCard(editingRoomId);
+  refreshExterior(); refreshAddRow();
+  if(qEditorOpen) refreshEditorBody();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ROOM GALLERY (read-only, full-screen)
+   ═══════════════════════════════════════════════════════════════════════ */
+const PHOTO_GROUPS = [
+  { key:'walls',    label:'Walls & ceiling' },
+  { key:'door',     label:'Door' },
+  { key:'window',   label:'Window' },
+  { key:'grill',    label:'Grill' },
+  { key:'cabinet',  label:'Cabinet' },
+  { key:'bathroom', label:'Bathroom' },
+];
+function galleryCellHtml(r, cat, p, i){
+  if(p.detected===false){
+    return `<div class="pcell bad"><img src="${p.src}" alt="">
+      <div class="warnov"><span class="ex">!</span><span class="wt">Wall not detected</span>
+        <button class="recap" data-act="qpic:${r.id}:walls:recapture:${i}">Recapture</button></div></div>`;
+  }
+  return `<div class="pcell"><img src="${p.src}" alt=""></div>`;
+}
+function openRoomGallery(id){
+  const r = roomById(id); if(!r) return;
+  const secs = PHOTO_GROUPS.map(g=>{
+    const arr = r.photos[g.key]||[];
+    if(!arr.length) return '';
+    return `<div class="pcsub">${g.label}</div><div class="pgrid">${arr.map((p,i)=>galleryCellHtml(r,g.key,p,i)).join('')}</div>`;
+  }).join('');
+  const ov = document.createElement('div');
+  ov.className='ov'; ov.id='qGallery';
+  ov.innerHTML = `<div class="ov-top"><button class="ov-x" data-act="q:closegallery">${I.x}</button><span class="ov-title">${r.name} · photos</span></div>
+    <div class="ov-scroll">${secs || '<div class="pcsub">No photos yet</div>'}</div>`;
+  document.body.appendChild(ov);
+  bindActs(ov);
+}
+function closeRoomGallery(){ const el=document.getElementById('qGallery'); if(el) el.remove(); }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   FULL-SCREEN EDITOR (options + pictures), live-commit
+   ═══════════════════════════════════════════════════════════════════════ */
+function seg(actYes, actNo, on){
+  return `<span class="seg"><button class="${on?'on':''}" data-act="${actYes}">Yes</button><button class="${!on?'on':''}" data-act="${actNo}">No</button></span>`;
+}
+function stepper(dec, val, inc, min, max){
+  return `<span class="stepper"><button data-act="${dec}" ${val<=min?'disabled':''}>−</button><span class="n">${val}</span><button data-act="${inc}" ${val>=max?'disabled':''}>+</button></span>`;
+}
+function priceNote(v){ return `<span class="ed-price ${v?'':'zero'}">${v?'+ '+inr(v):'—'}</span>`; }
+
+const ADDON_LABELS = { door:'Door polish', window:'Window polish', grill:'Grill painting', cabinet:'Cabinet polish' };
+/* top-of-editor room summary: scope items (no cost) + paid add-ons (with cost), no total */
+function roomSummaryInner(r){
+  const L = (label,value,cost)=>`<div class="rs-row"><span>${label}</span><span class="rs-val ${cost?'cost':''}">${value}</span></div>`;
+  let rows = '';
+  rows += L('Walls', r.walls);
+  rows += L('Ceiling', r.ceiling ? '1' : 'None');
+  rows += L('Attached bathroom', r.bathroom ? 'Yes' : 'No');
+  rows += L('Attached balcony', r.balcony ? 'Yes' : 'No');
+  rows += L('Wall paint', paintLabel(r.wallPaint));
+  if(r.ceiling)  rows += L('Ceiling paint', paintLabel(r.ceilingPaint));
+  DETECTED.forEach(d=>{ if(r.addons[d.key] && r.addons[d.key].qty) rows += L(ADDON_LABELS[d.key], inr(d.price), true); });
+  if(r.repair)        rows += L('Repair', inr(RATES.repairPerRoom), true);
+  if(r.waterproofing) rows += L('Waterproofing', inr(RATES.waterproofingPerRoom), true);
+  return `<div class="ed-room-hd">This room</div><div class="rs-card">${rows}</div>`;
+}
+function editorBodyInner(r){
+  const wallTiles = PAINT_TYPES.map(t=>`<button class="tile ${r.wallPaint===t.id?'on':''}" data-act="qed:${r.id}:wallpaint:${t.id}">
+      <span class="tn">${t.label}</span><span class="tp">${inr(RATES.wallPerTier[t.id]*r.walls)}</span></button>`).join('');
+  const ceilChips = PAINT_TYPES.map(t=>`<button class="pchip ${r.ceilingPaint===t.id?'on':''}" data-act="qed:${r.id}:ceilpaint:${t.id}" ${r.ceiling?'':'disabled'}>${t.label} · ${inr(RATES.ceilingPerTier[t.id])}</button>`).join('');
+  const pics = PHOTO_GROUPS.map(g=>{
+    const arr = r.photos[g.key]||[];
+    const d = DETECTED.find(x=>x.key===g.key);
+    // detected item (door/window/grill/cabinet) → photo card with a "Found X" badge
+    // and a floating "Add <treatment> + ₹" pill (tap to toggle).
+    if(d){
+      if(!arr.length) return '';
+      const on = r.addons[g.key].qty>0;
+      return `<div class="pcsub">${g.label}</div>` + arr.map(p=>`
+        <div class="dc">
+          <img src="${p.src}" alt="${d.label}">
+          <span class="dc-badge">${d.label}</span>
+          <button class="dc-add ${on?'on':''}" data-act="qed:${r.id}:addon:${g.key}:${on?0:1}">
+            <span class="dc-ic">${d.icon}</span>
+            <span class="dc-txt"><span>${on?ADDON_LABELS[g.key]+' added ✓':d.treat}</span><b>+ ${inr(d.price)}</b></span>
+          </button>
+        </div>`).join('');
+    }
+    // walls / bathroom → normal thumbnail grid
+    const cells = arr.map((p,i)=>{
+      if(p.detected===false) return `<div class="pcell bad"><img src="${p.src}"><div class="warnov"><span class="ex">!</span><span class="wt">Wall not detected</span><button class="recap" data-act="qpic:${r.id}:${g.key}:recapture:${i}">Recapture</button></div></div>`;
+      return `<div class="pcell"><img src="${p.src}"><button class="pedit" data-act="qpic:${r.id}:${g.key}:retake:${i}">✎</button></div>`;
+    }).join('');
+    return `<div class="pcsub">${g.label}</div><div class="pgrid">${cells}<div class="pcell empty" data-act="qpic:${r.id}:${g.key}:add">+</div></div>`;
+  }).join('');
+
+  return `${roomSummaryInner(r)}
+    <div class="ed-room-hd" style="margin-top:18px">Options</div>
+    <div class="ed-row"><div class="ed-top"><span class="ed-lab">Attached bathroom</span>${seg(`qed:${r.id}:bath:1`,`qed:${r.id}:bath:0`,r.bathroom)}</div></div>
+    <div class="ed-row"><div class="ed-top"><span class="ed-lab">Attached balcony</span>${seg(`qed:${r.id}:balcony:1`,`qed:${r.id}:balcony:0`,r.balcony)}</div></div>
+    <div class="ed-row"><div class="ed-top"><span class="ed-lab">Ceiling</span><span>${seg(`qed:${r.id}:ceiling:1`,`qed:${r.id}:ceiling:0`,r.ceiling)}</span></div>
+      <div class="ed-sub">${r.ceiling?priceNoteText(roomCeilingAmount(r)):'Not painting the ceiling'}</div></div>
+    <div class="ed-row"><div class="ed-top"><span class="ed-lab"># Walls</span>${stepper(`qed:${r.id}:walls:dec`,r.walls,`qed:${r.id}:walls:inc`,0,8)}</div>
+      <div class="ed-sub">${priceNoteText(roomWallsAmount(r))} · ${r.walls} × ${inr(RATES.wallPerTier[r.wallPaint])}</div></div>
+    <div class="ed-row"><div class="ed-top"><span class="ed-lab">Wall paint</span></div><div class="tiles">${wallTiles}</div></div>
+    <div class="ed-row"><div class="ed-top"><span class="ed-lab">Ceiling paint</span></div><div class="chiprow">${ceilChips}</div></div>
+    <div class="ed-row"><div class="ed-top"><span class="ed-lab">Repair damages</span><span>${seg(`qed:${r.id}:repair:1`,`qed:${r.id}:repair:0`,r.repair)} ${priceNote(r.repair?RATES.repairPerRoom:0)}</span></div></div>
+    <div class="ed-row"><div class="ed-top"><span class="ed-lab">Waterproofing</span><span>${seg(`qed:${r.id}:wproof:1`,`qed:${r.id}:wproof:0`,r.waterproofing)} ${priceNote(r.waterproofing?RATES.waterproofingPerRoom:0)}</span></div></div>
+    <div class="ed-room-hd" style="margin-top:18px">Photos — we found these to paint</div>
+    ${pics}`;
+}
+function priceNoteText(v){ return v?('+ '+inr(v)):'—'; }
+/* price shown relative to the current pick: selected → ₹0, others → +/− diff */
+function deltaLabel(cur, val){ const d = val - cur; return d===0 ? '₹0' : (d>0 ? '+ '+inr(d) : '− '+inr(-d)); }
+
+function openRoomEditor(id){
+  const r = roomById(id); if(!r) return;
+  editingRoomId = id; qEditorOpen = true;
+  _snapshot = JSON.parse(JSON.stringify(r));
+  const ov = document.createElement('div');
+  ov.className='ov'; ov.id='qEditor';
+  ov.innerHTML = `<div class="ov-top"><button class="ov-x" data-act="q:closeeditor">${I.x}</button><span class="ov-title">Customize ${r.name}</span></div>
+    <div class="ov-scroll" id="qed-scroll">${editorBodyInner(r)}</div>
+    <div class="ed-foot"><button class="ed-reset" data-act="q:resetroom">Reset room</button>
+      <span class="ed-total" id="qed-total">Final price<b>${inr(quoteTotals(QUOTE).final)}</b></span>
+      <button class="ed-done" data-act="q:closeeditor">Done</button></div>`;
+  document.body.appendChild(ov);
+  bindActs(ov);
+  staggerIn(document.getElementById('qed-scroll'));
+}
+/* fade the editor's sections in one-by-one (fast). Only on open, not on edits. */
+function staggerIn(container){
+  if(!container) return;
+  [...container.children].forEach((el,i)=>{ el.style.animation='edIn .24s ease both'; el.style.animationDelay=(i*0.045)+'s'; });
+}
+function refreshEditorBody(){
+  const sc = document.getElementById('qed-scroll'); if(!sc) return;
+  const top = sc.scrollTop;
+  sc.innerHTML = editingExterior ? exteriorEditorBodyInner() : editorBodyInner(roomById(editingRoomId));
+  sc.scrollTop = top;
+  bindActs(sc);
+  const tot = document.getElementById('qed-total'); if(tot) tot.innerHTML = `Final price<b>${inr(quoteTotals(QUOTE).final)}</b>`;
+  if(editingExterior){ const d=document.getElementById('qed-done'); if(d){ const ok=exteriorComplete(); d.disabled=!ok; d.style.opacity=ok?1:.4; } }
+}
+function closeRoomEditor(){ const el=document.getElementById('qEditor'); if(el) el.remove(); qEditorOpen=false; editingRoomId=null; editingExterior=false; }
+
+/* ── exterior editor (full-screen) ── */
+function exteriorEditorBodyInner(){
+  const e = QUOTE.exterior;
+  const tiles = PAINT_TYPES.map(t=>`<button class="tile ${e.tier===t.id?'on':''}" data-act="qext:tier:${t.id}">
+      <span class="tn">${t.label}</span><span class="tp">${inr(RATES.exteriorPerTier[t.id])}/wall</span></button>`).join('');
+  const wallCards = e.walls.map((w,i)=>{
+    const seep = w.seepageDetected ? `<div class="ew-row"><span class="ew-lab">Seepage detected<em>Add waterproofing</em></span><span>${seg(`qext:wall:${i}:wproof:1`,`qext:wall:${i}:wproof:0`,w.waterproofing)}<span class="ew-p2">${w.waterproofing?'+ ':''}${inr(RATES.waterproofingPerRoom)}</span></span></div>` : '';
+    const dmg = w.damageDetected ? `<div class="ew-row"><span class="ew-lab">Damage detected<em>Add repair</em></span><span>${seg(`qext:wall:${i}:repair:1`,`qext:wall:${i}:repair:0`,w.repair)}<span class="ew-p2">${w.repair?'+ ':''}${inr(RATES.repairPerRoom)}</span></span></div>` : '';
+    const clean = (!w.seepageDetected && !w.damageDetected) ? `<div class="ew-clean">✓ No seepage or damage found</div>` : '';
+    return `<div class="ext-wall">
+      <div class="ew-thumb"><img src="${w.photo.src}" alt="Wall ${i+1}">${w.seepageDetected?'<span class="ew-flag">Seepage</span>':''}</div>
+      <div class="ew-body">
+        <div class="ew-hd"><b>Wall ${i+1}</b>${e.tier?`<span class="ew-price">Paint + ${inr(RATES.exteriorPerTier[e.tier])}</span>`:''}<button class="ew-x" data-act="qext:wall:${i}:remove" aria-label="Remove wall">${I.trash}</button></div>
+        ${seep}${dmg}${clean}
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="ed-room-hd">Exterior walls</div>
+    ${wallCards || '<div class="ed-sub" style="margin:0 2px 10px">No walls yet — add one by taking a photo.</div>'}
+    <button class="q-ext-add" style="width:100%" data-act="qext:addwall">+ Add wall (take photo)</button>
+    <div class="ed-room-hd" style="margin-top:20px">Exterior paint · all walls</div>
+    <div class="tiles">${tiles}</div>
+    ${e.tier?`<div class="ed-sub" style="margin-top:8px">${e.walls.length} walls × ${inr(RATES.exteriorPerTier[e.tier])} = ${inr(e.walls.length*RATES.exteriorPerTier[e.tier])}</div>`:'<div class="ed-sub" style="margin-top:8px">Pick a paint to price the walls.</div>'}
+    <div style="margin-top:20px"><button class="ed-reset" data-act="q:removeext">Remove exterior painting</button></div>`;
+}
+function openExteriorEditor(){
+  if(!QUOTE.exterior.enabled){ QUOTE.exterior.enabled = true; QUOTE.exterior.walls = []; QUOTE.exterior.tier = null; }
+  editingExterior = true; editingRoomId = null; qEditorOpen = true;
+  _snapshot = JSON.parse(JSON.stringify(QUOTE.exterior));
+  const ov = document.createElement('div'); ov.className='ov'; ov.id='qEditor';
+  ov.innerHTML = `<div class="ov-top"><button class="ov-x" data-act="q:closeeditor">${I.x}</button><span class="ov-title">Customize Exterior</span></div>
+    <div class="ov-scroll" id="qed-scroll">${exteriorEditorBodyInner()}</div>
+    <div class="ed-foot"><button class="ed-reset" data-act="q:resetext">Reset</button>
+      <span class="ed-total" id="qed-total">Final price<b>${inr(quoteTotals(QUOTE).final)}</b></span>
+      <button class="ed-done" id="qed-done" data-act="q:closeeditor" ${exteriorComplete()?'':'disabled style="opacity:.4"'}>Done</button></div>`;
+  document.body.appendChild(ov); bindActs(ov);
+  staggerIn(document.getElementById('qed-scroll'));
+}
+/* exterior is complete when it has at least one wall AND a paint tier chosen */
+function exteriorComplete(){ const e=QUOTE.exterior; return e.walls.length>0 && !!e.tier; }
+function qExtEdit(a){
+  const p = a.split(':'); const field = p[1];
+  if(field==='tier')    return applyEdit(()=>{ QUOTE.exterior.tier = p[2]; });
+  if(field==='addwall') return pickImage(src=> applyEdit(()=>{ QUOTE.exterior.walls.push({ photo:W(src), seepageDetected:Math.random()<0.5, damageDetected:Math.random()<0.4, waterproofing:false, repair:false }); }));
+  if(field==='wall'){
+    const i = +p[2], op = p[3];
+    if(op==='remove') return applyEdit(()=>{ QUOTE.exterior.walls.splice(i,1); });
+    if(op==='wproof') return applyEdit(()=>{ QUOTE.exterior.walls[i].waterproofing = p[4]==='1'; });
+    if(op==='repair') return applyEdit(()=>{ QUOTE.exterior.walls[i].repair = p[4]==='1'; });
+  }
+}
+
+/* ── booking / accept step ── */
+let bookState = { date:null };
+/* TEST BUILD: instead of the booking/payment page, offer to wipe this session's
+   data (photos + everything Gemini generated) from the backend. */
+function openBooking(){
+  const ov = document.createElement('div'); ov.className='ov'; ov.id='qBook';
+  ov.innerHTML = `<div class="ov-top"><button class="ov-x" data-act="q:closebook">${I.x}</button><span class="ov-title">Test session</span></div>
+    <div class="ov-scroll" style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px;padding:52px 26px">
+      <div style="font-size:56px;line-height:1">🧹</div>
+      <div style="font-size:21px;font-weight:600;letter-spacing:-.02em">Delete test data</div>
+      <div style="color:var(--ink-2);font-size:14px;line-height:1.55;max-width:300px">Removes every photo you uploaded this session, plus everything Gemini generated for it (empty-room, painted wall, analysis) — from R2 and MongoDB.</div>
+      <button class="q-cta" id="delTestBtn" data-act="q:deltest" style="margin-top:8px;background:#E23B3B">Delete test data</button>
+      <div id="delTestMsg" style="font-size:13px;color:var(--ink-3);min-height:18px"></div>
+    </div>`;
+  document.body.appendChild(ov); bindActs(ov);
+}
+async function deleteTestData(){
+  const btn = document.getElementById('delTestBtn'), msg = document.getElementById('delTestMsg');
+  let sess = null; try { sess = JSON.parse(sessionStorage.getItem('LHP_SESSION') || 'null'); } catch(e){}
+  if(!sess || !sess.surveyId){ if(msg) msg.textContent = 'No backend session found (ran in simulate mode — nothing to delete).'; return; }
+  if(btn){ btn.disabled = true; btn.textContent = 'Deleting…'; }
+  try {
+    const url = (sess.api || '') + '/api/delete-session' + (sess.key ? ('?auth_key=' + encodeURIComponent(sess.key)) : '');
+    const r = await fetch(url, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ surveyId: sess.surveyId }) });
+    const j = await r.json();
+    if(!j.ok) throw new Error(j.error || 'delete failed');
+    sessionStorage.removeItem('LHP_SESSION');
+    if(btn){ btn.textContent = 'Deleted ✓'; btn.style.background = '#07794C'; }
+    if(msg) msg.textContent = `Deleted ${j.imagesDeleted} image(s) + all analysis for this session.`;
+  } catch(e){
+    if(msg) msg.textContent = 'Delete failed: ' + (e && e.message ? e.message : e);
+    if(btn){ btn.disabled = false; btn.textContent = 'Retry delete'; }
+  }
+}
+function showBookingSuccess(){
+  const ov = document.getElementById('qBook'); if(!ov) return;
+  const t = quoteTotals(QUOTE);
+  ov.innerHTML = `<div class="ov-scroll" style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:11px;padding:48px 26px">
+      <div style="font-size:74px;line-height:1">🎉</div>
+      <div style="font-size:24px;font-weight:600;letter-spacing:-.02em">Booking confirmed!</div>
+      <div style="color:var(--ink-2);font-size:14px;line-height:1.5;max-width:290px">Our painting team will call you shortly to confirm materials and your exact start date.</div>
+      <div class="q-chip tier" style="margin-top:6px;font-size:13px">Final price ${inr(t.final)} · 25% off applied</div>
+      <button class="q-cta" style="margin-top:22px" data-act="q:closebook">Done</button>
+    </div>`;
+  bindActs(ov);
+}
+
+/* ── add room / add-buttons row ── */
+function refreshAddRow(){ const el=document.getElementById('q-addrow'); if(el){ el.innerHTML=addButtonsInner(); bindActs(el); } }
+function renderRooms(){ const el=document.getElementById('q-rooms'); if(!el) return;
+  el.innerHTML = QUOTE.rooms.map(r=>`<div class="q-room" id="qroom_${r.id}">${roomCardInner(r)}</div>`).join(''); bindActs(el); }
+let roomSeq = 4;
+function addRoom(){
+  const n = ++roomSeq; const id = 'r'+n;
+  QUOTE.rooms.push({ id, name:'Area '+n, walls:4, ceiling:true, bathroom:false, balcony:false,
+    wallPaint:'premium', ceilingPaint:'economy', repair:false, waterproofing:false,
+    addons:{ door:{qty:0}, window:{qty:0}, grill:{qty:0}, cabinet:{qty:0} },
+    photos:{ walls:[], door:[], grill:[], cabinet:[], bathroom:[] }, flags:{} });
+  renderRooms(); refreshSummary(); refreshFooter();
+  openRoomEditor(id);   // open the editor so the customer configures the new area right away
+}
+function openAreaPicker(){
+  const opts = AREA_TYPES.map(t=>`<button class="area-opt" data-act="q:pickarea:${t.id}"><span class="ai">${t.icon}</span>${t.label}</button>`).join('');
+  const ov = document.createElement('div'); ov.className='sheet-ov'; ov.id='qPicker';
+  ov.innerHTML = `<div class="sheet" role="dialog" aria-label="Add an area">
+    <div class="sheet-grab"></div><div class="sheet-title">Add an area</div>
+    <div class="area-grid">${opts}</div></div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', e=>{ if(e.target===ov) closeAreaPicker(); });
+  bindActs(ov);
+  requestAnimationFrame(()=>ov.classList.add('open'));
+}
+function closeAreaPicker(){ const s=document.getElementById('qPicker'); if(s){ s.classList.remove('open'); setTimeout(()=>s.remove(),260); } }
+function openConfirmDelete(id){
+  const r=roomById(id); if(!r) return;
+  const ov=document.createElement('div'); ov.className='sheet-ov'; ov.id='qConfirm';
+  ov.innerHTML=`<div class="sheet" role="dialog" aria-label="Remove area">
+    <div class="sheet-grab"></div>
+    <div class="confirm-title">Remove ${r.name}?</div>
+    <div class="confirm-sub">It'll be taken out of your quote.</div>
+    <div class="confirm-actions">
+      <button class="confirm-cancel" data-act="q:closeconfirm">Cancel</button>
+      <button class="confirm-del" data-act="q:confirmdel:${id}">Remove</button>
+    </div></div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', e=>{ if(e.target===ov) closeConfirm(); });
+  bindActs(ov);
+  requestAnimationFrame(()=>ov.classList.add('open'));
+}
+function closeConfirm(){ const s=document.getElementById('qConfirm'); if(s){ s.classList.remove('open'); setTimeout(()=>s.remove(),260); } }
+function addRoomOfType(type){
+  const t = AREA_TYPES.find(x=>x.id===type); const base = t.label;
+  const same = QUOTE.rooms.filter(r=>r.name===base || r.name.indexOf(base+' ')===0).length;
+  const name = same ? base+' '+(same+1) : base;
+  const n = ++roomSeq; const id = 'r'+n; const bal = type==='balcony';
+  QUOTE.rooms.push({ id, name, walls: bal?2:4, ceiling: !bal, bathroom:false, balcony:false,
+    wallPaint:'premium', ceilingPaint:'economy', repair:false, waterproofing:false,
+    addons:{ door:{qty:0}, window:{qty:0}, grill:{qty:0}, cabinet:{qty:0} },
+    photos:{ walls:[], door:[], grill:[], cabinet:[], bathroom:[] }, flags:{} });
+  renderRooms(); refreshSummary(); refreshFooter();
+  openRoomEditor(id);
+}
+
+/* ── global paint editor (whole-home) ── */
+function finalIfAll(field, tier){
+  const saved = QUOTE.rooms.map(r=>r[field]);
+  QUOTE.rooms.forEach(r=>r[field]=tier);
+  const f = quoteTotals(QUOTE).final;
+  QUOTE.rooms.forEach((r,i)=>r[field]=saved[i]);
+  return f;
+}
+/* most-common value of a field across rooms = the "whole home" default */
+/* whole-home ceiling total if all painted ceilings used this tier */
+function ceilTotalIfAll(tier){ return QUOTE.rooms.reduce((s,r)=> s + (r.ceiling ? RATES.ceilingPerTier[tier] : 0), 0); }
+function homeMode(field){
+  const c={}; QUOTE.rooms.forEach(r=>{ c[r[field]]=(c[r[field]]||0)+1; });
+  let best = QUOTE.rooms[0] ? QUOTE.rooms[0][field] : 'premium', bn=-1;
+  for(const k in c){ if(c[k]>bn){ bn=c[k]; best=k; } }
+  return best;
+}
+function globalPaintBodyInner(){
+  const wallMode = homeMode('wallPaint'), ceilMode = homeMode('ceilingPaint');
+  const wallTiles = PAINT_TYPES.map(t=>`<button class="tile ${wallMode===t.id?'on':''}" data-act="qg:wall:${t.id}">
+      <span class="tn">${t.label}</span><span class="tp">${inr(finalIfAll('wallPaint',t.id))}</span></button>`).join('');
+  const ceilChips = PAINT_TYPES.map(t=>`<button class="pchip ${ceilMode===t.id?'on':''}" data-act="qg:ceil:${t.id}">${t.label} · ${inr(ceilTotalIfAll(t.id))}</button>`).join('');
+  // rooms whose wall paint differs from the whole-home default → shown as specials
+  const special = QUOTE.rooms.filter(r=>r.wallPaint!==wallMode);
+  const customizations = special.length ? `<div class="ed-room-hd" style="margin-top:24px">Customizations</div>
+    <div class="ed-sub" style="margin:0 2px 10px">Rooms you've given a different finish — tap to change.</div>`
+    + special.map(r=>`<button class="gp-special" data-act="q:editroom:${r.id}">
+        <span>${r.name}</span><span class="q-chip tier">${paintLabel(r.wallPaint)} · ${inr(roomWallsAmount(r))}</span></button>`).join('') : '';
+  return `<div class="ed-room-hd">Full home paint</div>
+    <div class="ed-sub" style="margin:0 2px 12px">Applies to every room — prices update as you change.</div>
+    <div class="gp-sub">Walls</div>
+    <div class="tiles">${wallTiles}</div>
+    <div class="gp-sub" style="margin-top:16px">Ceiling</div>
+    <div class="chiprow">${ceilChips}</div>
+    ${customizations}`;
+}
+function openGlobalPaint(){
+  const ov = document.createElement('div'); ov.className='ov'; ov.id='qGlobal';
+  ov.innerHTML = `<div class="ov-top"><button class="ov-x" data-act="q:closeglobal">${I.x}</button><span class="ov-title">Change paint · Full home</span></div>
+    <div class="ov-scroll" id="qg-scroll" style="padding-bottom:24px">${globalPaintBodyInner()}</div>
+    <div class="ed-foot"><span class="ed-total" style="text-align:left;flex:1"><b>${inr(quoteTotals(QUOTE).final)}</b>whole-home final</span>
+      <button class="ed-done" data-act="q:closeglobal">Done</button></div>`;
+  document.body.appendChild(ov); bindActs(ov);
+}
+function refreshGlobalBody(){ const sc=document.getElementById('qg-scroll'); if(!sc) return;
+  const top=sc.scrollTop; sc.innerHTML=globalPaintBodyInner(); sc.scrollTop=top; bindActs(sc);
+  const t=document.querySelector('#qGlobal .ed-total'); if(t) t.innerHTML=`<b>${inr(quoteTotals(QUOTE).final)}</b>whole-home final`; }
+function qGlobal(a){ const p=a.split(':');
+  applyEdit(()=>{ QUOTE.rooms.forEach(r=>{ if(p[1]==='wall') r.wallPaint=p[2]; else r.ceilingPaint=p[2]; }); });
+  refreshGlobalBody(); }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   CAPTURE (mock) — file input stands in for the camera.
+   @integration: real uploader returns stored URL + `detected` verdict.
+   ═══════════════════════════════════════════════════════════════════════ */
+function pickImage(cb){
+  const inp = document.createElement('input');
+  inp.type='file'; inp.accept='image/*'; inp.setAttribute('capture','environment');
+  inp.onchange = () => { const f=inp.files && inp.files[0]; if(!f) return;
+    const rd=new FileReader(); rd.onload=()=>cb(rd.result); rd.readAsDataURL(f); };
+  inp.click();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   GEMINI — empty-room preview (strip movable objects, keep fixed structures)
+   @integration: for a shared/deployed build, call your /api/empty-room proxy
+   instead of putting GEMINI_KEY in the client.
+   ═══════════════════════════════════════════════════════════════════════ */
+const GEMINI_KEY = '';                              // ← paste locally; never commit/share this copy
+const IMG_MODEL  = 'gemini-2.5-flash-image';        // you said "gemini 3.1 flash image" — set to your console's id
+const EMPTY_PROMPT = `Edit this photo of a room to REMOVE all movable / free-standing objects, so only the empty room and its fixed structures remain.
+
+REMOVE: free-standing furniture, chairs, tables, sofas, beds, free-standing wardrobes, decor, plants, rugs, boxes, appliances, light fixtures, curtains, curtain rods, stabilizer, paintings on the walls, mattress or any other object on floor that are not built in, and any clutter in front of the walls.
+
+KEEP EXACTLY AS-IS (do not move, resize, restyle or recolor): the primary wall and all fixed/built-in structures — windows, doors, built-in/wall-mounted wardrobes, tiles, wall panels, pillars, beams, recesses/niches, skirting, switchboards, paintings painted on wall.
+
+Realistically reconstruct (inpaint) the wall and floor surfaces revealed behind the removed objects, matching the existing colour, texture and lighting. Do NOT change the room geometry, camera angle, perspective, lighting or wall dimensions. Output only the edited image.`;
+
+async function toDataUrl(url){
+  if(url.startsWith('data:')) return url;
+  const b = await (await fetch(url)).blob();
+  return await new Promise(res=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.readAsDataURL(b); });
+}
+async function emptyRoom(dataUrl){
+  const body = { contents:[{ parts:[ { text:EMPTY_PROMPT }, { inline_data:{ mime_type:'image/jpeg', data:dataUrl.split(',')[1] } } ] }],
+    generationConfig:{ temperature:0.6, responseModalities:['IMAGE'] } };
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${IMG_MODEL}:generateContent?key=${GEMINI_KEY}`,
+    { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  const j = await res.json();
+  if(!res.ok) throw new Error((j.error && j.error.message) || ('HTTP '+res.status));
+  const part = (j.candidates?.[0]?.content?.parts || []).find(p=>p.inline_data||p.inlineData);
+  if(!part) throw new Error('No image returned');
+  const d = part.inline_data || part.inlineData;
+  return 'data:'+(d.mime_type||d.mimeType)+';base64,'+d.data;
+}
+function previewEmpty(id, cat, idx){
+  const r = roomById(id); const p = r && r.photos[cat] && r.photos[cat][idx]; if(!p) return;
+  const ov = document.createElement('div'); ov.className='ov'; ov.id='qPreview';
+  ov.innerHTML = `<div class="ov-top"><button class="ov-x" data-act="q:closepreview">${I.x}</button><span class="ov-title">Empty-room preview</span></div>
+    <div class="ov-scroll">
+      <div class="pcsub">Original</div><div class="fx-img"><img src="${p.src}"></div>
+      <div class="pcsub">Empty room</div><div class="fx-img" id="fx-out"><div class="fx-status">${GEMINI_KEY?'Generating with Gemini… ✨':'Add your Gemini key (GEMINI_KEY in the code) to enable this.'}</div></div>
+    </div>`;
+  document.body.appendChild(ov); bindActs(ov);
+  if(!GEMINI_KEY) return;
+  (async()=>{
+    try{ const out = await emptyRoom(await toDataUrl(p.src));
+      const el=document.getElementById('fx-out'); if(el) el.innerHTML = `<img src="${out}">`; }
+    catch(e){ const el=document.getElementById('fx-out'); if(el) el.innerHTML = `<div class="fx-status">Couldn't generate: ${e.message}</div>`; }
+  })();
+}
+function closePreview(){ const el=document.getElementById('qPreview'); if(el) el.remove(); }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DISPATCH
+   ═══════════════════════════════════════════════════════════════════════ */
+function route(a){
+  if(a.startsWith('qed:'))  return qEdit(a);
+  if(a.startsWith('qext:')) return qExtEdit(a);
+  if(a.startsWith('qg:'))   return qGlobal(a);
+  if(a.startsWith('qpic:')) return qPic(a);
+  if(a.startsWith('qfx:')){ const p=a.split(':'); return previewEmpty(p[1],p[2],+p[3]); }
+  return qAct(a);
+}
+function qAct(a){
+  const [,verb,arg] = a.split(':');
+  if(verb==='back')         return history.length > 1 ? history.back() : (location.href = 'lhp-self-survey-chat (6).html');
+  if(verb==='customize')    return openRoomEditor(arg);
+  if(verb==='gallery')      return openRoomGallery(arg);
+  if(verb==='closegallery') return closeRoomGallery();
+  if(verb==='closeeditor')  return closeRoomEditor();
+  if(verb==='resetroom')    return applyEdit(Q=>{ const i=Q.rooms.findIndex(x=>x.id===editingRoomId); if(i>=0) Q.rooms[i]=JSON.parse(JSON.stringify(_snapshot)); });
+  if(verb==='extoggle')     return QUOTE.exterior.enabled ? applyEdit(Q=>{ Q.exterior.enabled=false; }) : openExteriorEditor();
+  if(verb==='extedit')      return openExteriorEditor();
+  if(verb==='resetext')     return applyEdit(()=>{ QUOTE.exterior = JSON.parse(JSON.stringify(_snapshot)); });
+  if(verb==='removeext')    { closeRoomEditor(); return applyEdit(Q=>{ Q.exterior.enabled=false; }); }
+  if(verb==='editpaint')    return openGlobalPaint();
+  if(verb==='editroom'){ const el=document.getElementById('qGlobal'); if(el) el.remove(); return openRoomEditor(arg); }
+  if(verb==='closeglobal'){ const el=document.getElementById('qGlobal'); if(el) el.remove(); return; }
+  if(verb==='closepreview') return closePreview();
+  if(verb==='addroom')      return addRoom();
+  if(verb==='viewquote'){ const s=document.getElementById('qscroll'); if(s) s.scrollTo({top:0,behavior:'smooth'}); return; }
+  if(verb==='addarea')      return openAreaPicker();
+  if(verb==='closepicker')  return closeAreaPicker();
+  if(verb==='pickarea'){ closeAreaPicker(); return arg==='exterior' ? openExteriorEditor() : addRoomOfType(arg); }
+  if(verb==='delroom')     return openConfirmDelete(arg);
+  if(verb==='confirmdel'){ closeConfirm(); QUOTE.rooms = QUOTE.rooms.filter(r=>r.id!==arg); renderRooms(); refreshSummary(); refreshFooter(); return; }
+  if(verb==='closeconfirm') return closeConfirm();
+  if(verb==='book')         return openBooking();
+  if(verb==='deltest')      return deleteTestData();
+  if(verb==='bookdate'){ bookState.date = +arg;
+    document.querySelectorAll('#bookdates .pchip').forEach((b,i)=>b.classList.toggle('on', i===+arg));
+    const c=document.getElementById('bookConfirm'); if(c){ c.disabled=false; c.style.opacity=1; } return; }
+  if(verb==='confirmbook')  return showBookingSuccess();
+  if(verb==='closebook'){ const el=document.getElementById('qBook'); if(el) el.remove(); return; }
+}
+function qEdit(a){
+  const p = a.split(':'); const id=p[1], field=p[2];
+  const r = roomById(id); if(!r) return;
+  applyEdit(()=>{
+    if(field==='bath')      r.bathroom = p[3]==='1';
+    else if(field==='balcony') r.balcony = p[3]==='1';
+    else if(field==='ceiling') r.ceiling = p[3]==='1';
+    else if(field==='walls')   r.walls = Math.max(0, Math.min(8, r.walls + (p[3]==='inc'?1:-1)));
+    else if(field==='wallpaint'){ r.wallPaint = p[3]; }
+    else if(field==='ceilpaint'){ r.ceilingPaint = p[3]; }
+    else if(field==='repair')  r.repair = p[3]==='1';
+    else if(field==='wproof')  r.waterproofing = p[3]==='1';
+    else if(field==='addon'){ const cat=p[3]; r.addons[cat].qty = p[4]==='1' ? 1 : 0; }
+  });
+}
+function qPic(a){
+  const p = a.split(':'); const id=p[1], cat=p[2], op=p[3], idx=parseInt(p[4],10);
+  let arr;
+  if(id==='ext') arr = QUOTE.exterior.photos;
+  else { const rm=roomById(id); if(!rm) return; if(!rm.photos[cat]) rm.photos[cat]=[]; arr=rm.photos[cat]; }
+  if(!arr) return;
+  if(op==='remove')      return applyEdit(()=>{ arr.splice(idx,1); });
+  if(op==='add')         return pickImage(src=> applyEdit(()=>{ arr.push(W(src)); }));
+  if(op==='retake')      return pickImage(src=> applyEdit(()=>{ arr[idx]=W(src); }));
+  if(op==='recapture')   return pickImage(src=> applyEdit(()=>{ arr[idx]=W(src); }));  // mock: recapture always detects
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   BOOT — prefer a real handoff from the survey (sessionStorage, same origin),
+   else fall back to the mock seed above so the page still works standalone.
+   ═══════════════════════════════════════════════════════════════════════ */
+(function seedFromSurvey(){
+  // Prefer an injected global (used by the single-file blob build), else the
+  // cross-page sessionStorage handoff.
+  let s = (typeof window !== 'undefined' && window.__LHP_SEED__) ? window.__LHP_SEED__ : null;
+  if(!s){ let raw = null; try { raw = sessionStorage.getItem('LHP_QUOTE'); } catch(e){} if(!raw) return; try { s = JSON.parse(raw); } catch(e){ console.warn('quote seed parse failed', e); return; } }
+  try {
+    if(!s || !Array.isArray(s.rooms) || !s.rooms.length) return;
+    if(s.bhk != null) QUOTE.bhk = s.bhk;
+    if(s.discountPct != null) QUOTE.discountPct = s.discountPct;
+    if(s.exterior) QUOTE.exterior = s.exterior;
+    QUOTE.rooms = s.rooms;
+    QUOTE.rooms.forEach(r => {                       // normalize like the mock seed does
+      if(r.balcony === undefined) r.balcony = false;
+      const a = r.addons || {};
+      r.addons = { door:{qty:(a.door||{}).qty||0}, window:{qty:(a.window||{}).qty||0},
+                   grill:{qty:(a.grill||{}).qty||0}, cabinet:{qty:(a.cabinet||{}).qty||0} };
+      r.photos = Object.assign({ walls:[],door:[],window:[],grill:[],cabinet:[],bathroom:[] }, r.photos || {});
+      r.flags = r.flags || {};
+      recomputeFlags(r);
+    });
+    if(!QUOTE.exterior) QUOTE.exterior = { enabled:false, tier:null, walls:[] };
+  } catch(e){ console.warn('quote seed parse failed', e); }
+})();
+
+/* ── private-link gate (same key as the survey) ── */
+function authKeyFromUrl(){ const m = location.href.match(/[?&]auth_key=([^&]*)/); return m ? decodeURIComponent(m[1]) : ''; }
+const REQUIRED_KEY = 'ihhwfnnb121234#@';
+/* local origins (file:// and localhost) bypass the gate for testing; enforced on the deployed domain */
+const isLocalOrigin = location.protocol === 'file:' || location.protocol === 'blob:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || (typeof window !== 'undefined' && window.__LHP_SEED__);
+if(true){   // demo: open to everyone (was: isLocalOrigin || authKeyFromUrl() === REQUIRED_KEY)
+  renderQuotePage();
+} else {
+  app().innerHTML =
+    `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px;gap:14px">
+      <div style="font-size:54px">🔒</div>
+      <div style="font-size:20px;font-weight:600;color:var(--ink)">This link is private</div>
+      <div style="font-size:14px;color:var(--ink-2);max-width:280px;line-height:1.5">Open it with your access key in the URL to continue.</div>
+    </div>`;
+}
+</script>
+</body>
+</html>
