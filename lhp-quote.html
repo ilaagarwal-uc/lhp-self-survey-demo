@@ -552,6 +552,10 @@ function renderQuotePage(){
       <div class="q-addrow" id="q-addrow">${addButtonsInner()}</div>
       <div class="sec-h2" id="q-rooms-sec" style="display:flex;align-items:center;gap:8px"><span class="home-badge" data-act="q:report" style="cursor:pointer">${I.home}</span>Your home, room by room<button data-act="q:report" style="margin-left:auto;border:0;background:none;padding:0;cursor:pointer;color:var(--purple);font-weight:700;font-size:13.5px;text-decoration:underline;text-underline-offset:2px">View</button></div>
       <div id="q-rooms">${rooms}</div>
+      <button data-act="q:addons" style="width:100%;display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#F3EEFF,#EDE7F6);border:1.5px solid #D3C6F2;border-radius:14px;padding:14px;cursor:pointer;text-align:left;margin:2px 0 6px">
+        <span style="width:38px;height:38px;border-radius:10px;flex:0 0 auto;background:#fff;color:var(--purple);display:flex;align-items:center;justify-content:center;font-size:18px">✨</span>
+        <span style="flex:1"><span style="font-weight:700;font-size:14px;display:block;color:var(--ink)">Add doors, windows, grills &amp; cabinets</span><span style="font-size:12px;color:var(--purple);font-weight:700">Special on-site price →</span></span>
+      </button>
       <div id="q-exterior">${exteriorInner()}</div>
     </div>
     <div class="q-foot" id="qfoot">${footInner()}</div>`;
@@ -667,6 +671,40 @@ function openContract(){
   bindActs(ov);
 }
 function closeContract(){ const el=document.getElementById('qContract'); if(el) el.remove(); }
+
+/* Add-ons page — door / window / grill / cabinet enamel at a bundled on-site price.
+   Quantities are aggregated across rooms; +/- writes to the first room. */
+function addonTotal(key){ return QUOTE.rooms.reduce((s,r)=> s + ((r.addons[key] && r.addons[key].qty) || 0), 0); }
+function addonInc(key){ const r = QUOTE.rooms[0]; if(!r.addons[key]) r.addons[key] = {qty:0}; r.addons[key].qty++; }
+function addonDec(key){ for(const r of QUOTE.rooms){ if(r.addons[key] && r.addons[key].qty > 0){ r.addons[key].qty--; break; } } }
+function addonsListHtml(){
+  const stepBtn = act => `<button data-act="${act}" style="width:30px;height:30px;border:0;background:none;font-size:19px;font-weight:600;color:var(--purple);cursor:pointer;display:flex;align-items:center;justify-content:center">${act.endsWith('dec')?'−':'+'}</button>`;
+  return DETECTED.map(d=>{
+    const qty = addonTotal(d.key);
+    const name = { door:'Door painting', window:'Window painting', grill:'Grill painting', cabinet:'Cabinet painting' }[d.key] || d.label;
+    const ctrl = qty>0
+      ? `<span class="stepper">${stepBtn(`q:addon:${d.key}:dec`)}<b style="min-width:20px;text-align:center;font-size:14px">${qty}</b>${stepBtn(`q:addon:${d.key}:inc`)}</span>`
+      : `<button data-act="q:addon:${d.key}:inc" style="border:1.5px solid var(--purple);background:#fff;color:var(--purple);font-weight:700;font-size:13px;padding:8px 18px;border-radius:10px;cursor:pointer">Add</button>`;
+    return `<div style="display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px">
+      <span class="q-ic" style="width:38px;height:38px">${d.icon}</span>
+      <span style="flex:1"><span style="font-weight:700;font-size:14px;display:block">${name}</span><span style="font-size:12px;color:var(--ink-3)">Enamel finish · ${inr(d.price)} each</span></span>
+      ${ctrl}
+    </div>`;
+  }).join('');
+}
+function refreshAddons(){ const el=document.getElementById('addonList'); if(el){ el.innerHTML=addonsListHtml(); bindActs(el); } }
+function openAddons(){
+  if(document.getElementById('qAddons')) return;
+  const ov=document.createElement('div'); ov.className='ov'; ov.id='qAddons';
+  ov.innerHTML=`<div class="ov-top"><button class="ov-x" data-act="q:closeaddons">${I.x}</button><span class="ov-title">Add-ons · special price</span></div>
+    <div class="ov-scroll" style="padding:14px 16px 40px">
+      <div style="font-size:13px;color:var(--ink-2);line-height:1.5;margin:0 2px 14px">Your painters are already on site — add enamel &amp; metal work now at a <b style="color:var(--green)">bundled discount</b>.</div>
+      <div id="addonList">${addonsListHtml()}</div>
+    </div>`;
+  document.body.appendChild(ov);
+  bindActs(ov);
+}
+function closeAddons(){ const el=document.getElementById('qAddons'); if(el) el.remove(); }
 
 /* apply a detected fix (waterproofing / damage repair) to its detected room */
 function doAddFix(key){
@@ -1129,6 +1167,9 @@ function route(a){
   if(a==='q:closereport'){ closeFullReport(); return; }
   if(a==='q:contract'){ openContract(); return; }
   if(a==='q:closecontract'){ closeContract(); return; }
+  if(a==='q:addons'){ openAddons(); return; }
+  if(a==='q:closeaddons'){ closeAddons(); return; }
+  if(a.startsWith('q:addon:')){ const p=a.split(':'); const key=p[2], op=p[3]; if(op==='inc') addonInc(key); else addonDec(key); refreshAddons(); renderRooms(); refreshSummary(); refreshFooter(); return; }
   if(a.startsWith('q:repairs:')){ openRepairsSheet(a.slice(10)); return; }
   if(a==='q:closerepairs'){ closeRepairsSheet(); return; }
   if(a.startsWith('q:why:')){ const el = document.getElementById('why-' + a.slice(6)); if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none'; return; }
