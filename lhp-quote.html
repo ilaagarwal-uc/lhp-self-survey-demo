@@ -550,7 +550,7 @@ function renderQuotePage(){
     <div class="scroll" id="qscroll">
       <div class="q-summary" id="q-summary">${summaryInner()}</div>
       <div class="q-addrow" id="q-addrow">${addButtonsInner()}</div>
-      <div class="sec-h2" id="q-rooms-sec"><span class="home-badge" data-act="q:report" style="cursor:pointer">${I.home}</span>Your home, room by room</div>
+      <div class="sec-h2" id="q-rooms-sec" style="display:flex;align-items:center;gap:8px"><span class="home-badge" data-act="q:report" style="cursor:pointer">${I.home}</span>Your home, room by room<button data-act="q:report" style="margin-left:auto;border:0;background:none;padding:0;cursor:pointer;color:var(--purple);font-weight:700;font-size:13.5px;text-decoration:underline;text-underline-offset:2px">View</button></div>
       <div id="q-rooms">${rooms}</div>
       <div id="q-exterior">${exteriorInner()}</div>
     </div>
