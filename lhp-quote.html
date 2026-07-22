@@ -416,7 +416,7 @@ function bindActs(scope){ scope.querySelectorAll('[data-act]').forEach(b=> b.onc
 
 function summaryInner(){
   const t = quoteTotals(QUOTE);
-  const cats = t.categories.map(c=>`<div class="q-cat"><span class="lab">${c.label}${c.rec?` <span style="font-size:10px;font-weight:700;color:var(--red,#E23B3B);background:#FDECEC;padding:2px 7px;border-radius:999px;white-space:nowrap">Highly recommended</span> <button data-act="q:why:${c.key}" style="border:0;background:none;cursor:pointer;color:var(--ink-3);font-size:13px;padding:0;vertical-align:middle" aria-label="Why this matters">ⓘ</button>`:''}${c.sub?`<span class="q-cat-sub">${c.sub}</span>`:''}${c.rec&&c.why?`<span id="why-${c.key}" style="display:none;font-size:11.5px;color:var(--ink-2);background:#FDECEC;border-radius:9px;padding:9px 11px;margin-top:7px;line-height:1.5">${c.why}</span>`:''}</span><span class="amt">${inr(c.amount)}</span></div>`).join('');
+  const cats = t.categories.map(c=>`<div class="q-cat"><span class="lab">${c.label}${c.rec?` <span style="font-size:10px;font-weight:700;color:var(--red,#E23B3B);background:#FDECEC;padding:2px 7px;border-radius:999px;white-space:nowrap">Highly recommended</span> <button data-act="q:why:${c.key}" style="border:0;background:none;cursor:pointer;color:var(--ink-3);font-size:13px;padding:0;vertical-align:middle" aria-label="Why this matters">ⓘ</button>`:''}${c.sub?`<span class="q-cat-sub">${c.sub}</span>`:''}${c.rec&&c.why?`<span id="why-${c.key}" style="display:none;font-size:11.5px;color:var(--ink-2);background:#FDECEC;border-radius:9px;padding:9px 11px;margin-top:7px;line-height:1.5">${c.why}</span>`:''}</span><span class="amt">${c.rec?`<button data-act="q:addfix:${c.key}" style="border:1.5px solid var(--purple);background:#fff;color:var(--purple);font-weight:700;font-size:12.5px;padding:5px 13px;border-radius:999px;cursor:pointer">Add</button>`:inr(c.amount)}</span></div>`).join('');
   return `<div class="q-sum-top"><span class="q-sum-h" style="margin:0">Your quote</span><button class="q-sum-edit" data-act="q:editpaint">Change paint</button></div>
     ${cats}
     <div class="q-div"></div>
@@ -451,11 +451,19 @@ function chipsHtml(r){
   return c.join('');
 }
 function roomCardInner(r){
+  const all = [].concat(r.photos.walls, r.photos.door, r.photos.grill, r.photos.cabinet, r.photos.bathroom).filter(Boolean);
+  const n = all.length;
+  const viewTile = n
+    ? `<button data-act="q:gallery:${r.id}" style="width:100%;display:flex;align-items:center;gap:11px;background:var(--bg-soft,#F8F8FA);border:1px solid var(--line);border-radius:12px;padding:9px 11px;cursor:pointer;text-align:left;margin-top:10px">
+        <img src="${all[0].src}" alt="" style="width:42px;height:42px;border-radius:9px;object-fit:cover;flex:0 0 auto">
+        <span style="flex:1"><span style="font-weight:700;font-size:14px;display:block">View room</span><span style="font-size:12px;color:var(--ink-3)">${n} photo${n>1?'s':''}</span></span>
+        <span style="color:var(--ink-3);font-size:18px">›</span>
+      </button>`
+    : `<button data-act="q:customize:${r.id}" style="width:100%;background:var(--bg-soft,#F8F8FA);border:1px dashed var(--line);border-radius:12px;padding:12px;cursor:pointer;color:var(--purple);font-weight:700;margin-top:10px">+ Add photos</button>`;
   return `<div class="q-rhead"><span class="q-ic">${roomIcon(r.name)}</span><span class="q-rname">${r.name}</span><button class="q-del" data-act="q:delroom:${r.id}" aria-label="Remove ${r.name}">${I.trash}</button></div>
     <div class="q-chips">${chipsHtml(r)}</div>
-    ${thumbsHtml(r)}
+    ${viewTile}
     <div class="q-acts">
-      <button class="q-btn" data-act="q:gallery:${r.id}">View photos</button>
       <button class="q-btn primary" data-act="q:customize:${r.id}">Customize</button>
     </div>`;
 }
@@ -972,6 +980,7 @@ function closePreview(){ const el=document.getElementById('qPreview'); if(el) el
    ═══════════════════════════════════════════════════════════════════════ */
 function route(a){
   if(a.startsWith('q:why:')){ const el = document.getElementById('why-' + a.slice(6)); if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none'; return; }
+  if(a.startsWith('q:addfix:')){ const key = a.slice(9); const info = key === 'wproof' ? (QUOTE.detected && QUOTE.detected.seepage) : (QUOTE.detected && QUOTE.detected.damage); let r = (info && info.room && roomById(info.room)) || QUOTE.rooms[0]; if(r){ if(key === 'wproof') r.waterproofing = true; else r.repair = true; refreshSummary(); refreshRoomCard(r.id); refreshFooter(); } return; }
   if(a.startsWith('qed:'))  return qEdit(a);
   if(a.startsWith('qext:')) return qExtEdit(a);
   if(a.startsWith('qg:'))   return qGlobal(a);
