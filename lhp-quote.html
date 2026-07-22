@@ -404,11 +404,11 @@ const QUOTE = {
       wallPaint:'premium', ceilingPaint:'economy', repair:false, waterproofing:false,
       addons:{ door:{qty:1}, grill:{qty:0,variant:'balcony_grill'}, cabinet:{qty:0,variant:'single_cab'} },
       photos:{ walls:[W(randPool()),W(randPool()),W(randPool(),false),W(randPool()),W(randPool())],
-               door:randPhotos(1), grill:[], cabinet:[], bathroom:randPhotos(1) }, flags:{} },
+               door:randPhotos(1), window:randPhotos(1), grill:[], cabinet:[], bathroom:randPhotos(1) }, flags:{} },
     { id:'r2', name:'Bedroom 2', walls:4, ceiling:true, bathroom:false,
       wallPaint:'premium', ceilingPaint:'economy', repair:false, waterproofing:false,
       addons:{ door:{qty:0}, window:{qty:0}, grill:{qty:0}, cabinet:{qty:0} },
-      photos:{ walls:randPhotos(4), door:[], grill:[], cabinet:[], bathroom:[] }, flags:{} },
+      photos:{ walls:randPhotos(4), door:[], window:randPhotos(1), grill:[], cabinet:[], bathroom:[] }, flags:{} },
     { id:'r3', name:'Living Room', walls:4, ceiling:true, bathroom:false,
       wallPaint:'luxury', ceilingPaint:'premium', repair:true, waterproofing:false,
       addons:{ door:{qty:0}, grill:{qty:1,variant:'full_grill'}, cabinet:{qty:0,variant:'single_cab'} },
@@ -676,23 +676,49 @@ function openContract(){
 }
 function closeContract(){ const el=document.getElementById('qContract'); if(el) el.remove(); }
 
-/* Add-ons page — door / window / grill / cabinet enamel at a bundled on-site price.
-   Quantities are aggregated across rooms; +/- writes to the first room. */
-function addonTotal(key){ return QUOTE.rooms.reduce((s,r)=> s + ((r.addons[key] && r.addons[key].qty) || 0), 0); }
-function addonInc(key){ const r = QUOTE.rooms[0]; if(!r.addons[key]) r.addons[key] = {qty:0}; r.addons[key].qty++; }
-function addonDec(key){ for(const r of QUOTE.rooms){ if(r.addons[key] && r.addons[key].qty > 0){ r.addons[key].qty--; break; } } }
+/* Add-ons page — the detected door / window / grill / cabinet PHOTOS, each with its
+   own "Add paint · ₹" button. One item per detected photo; adding sets that room's
+   add-on quantity so the quote breakup reflects the count. */
+function addonItems(){
+  if(QUOTE._addonItems) return QUOTE._addonItems;
+  const items = [];
+  QUOTE.rooms.forEach(r=>{
+    DETECTED.forEach(d=>{
+      const photos = r.photos[d.key] || [];
+      const seeded = (r.addons[d.key] && r.addons[d.key].qty) || 0;
+      photos.forEach((p,i)=> items.push({ key:d.key, room:r.id, img:p.src, price:d.price, added: i < seeded }));
+    });
+  });
+  QUOTE._addonItems = items;
+  return items;
+}
+function recomputeAddonQty(){
+  QUOTE.rooms.forEach(r=> DETECTED.forEach(d=>{
+    const n = (QUOTE._addonItems||[]).filter(x=>x.key===d.key && x.room===r.id && x.added).length;
+    if(!r.addons[d.key]) r.addons[d.key] = {qty:0};
+    r.addons[d.key].qty = n;
+  }));
+}
 function addonsListHtml(){
-  const stepBtn = act => `<button data-act="${act}" style="width:30px;height:30px;border:0;background:none;font-size:19px;font-weight:600;color:var(--purple);cursor:pointer;display:flex;align-items:center;justify-content:center">${act.endsWith('dec')?'−':'+'}</button>`;
+  const items = addonItems();
   return DETECTED.map(d=>{
-    const qty = addonTotal(d.key);
+    const list = items.map((it,idx)=>({it,idx})).filter(x=>x.it.key===d.key);
+    if(!list.length) return '';
     const name = { door:'Door painting', window:'Window painting', grill:'Grill painting', cabinet:'Cabinet painting' }[d.key] || d.label;
-    const ctrl = qty>0
-      ? `<span class="stepper">${stepBtn(`q:addon:${d.key}:dec`)}<b style="min-width:20px;text-align:center;font-size:14px">${qty}</b>${stepBtn(`q:addon:${d.key}:inc`)}</span>`
-      : `<button data-act="q:addon:${d.key}:inc" style="border:1.5px solid var(--purple);background:#fff;color:var(--purple);font-weight:700;font-size:13px;padding:8px 18px;border-radius:10px;cursor:pointer">Add</button>`;
-    return `<div style="display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px">
-      <span class="q-ic" style="width:38px;height:38px">${d.icon}</span>
-      <span style="flex:1"><span style="font-weight:700;font-size:14px;display:block">${name}</span><span style="font-size:12px;color:var(--ink-3)">Enamel finish · ${inr(d.price)} each</span></span>
-      ${ctrl}
+    const tiles = list.map(({it,idx})=>{
+      const r = roomById(it.room);
+      return `<div style="position:relative;flex:0 0 auto;width:150px;border-radius:10px;overflow:hidden;background:#000">
+        ${r?`<span style="position:absolute;left:6px;top:6px;z-index:2;font:700 9.5px/1 var(--font);color:#fff;background:rgba(15,15,25,.6);padding:4px 7px;border-radius:6px">${r.name}</span>`:''}
+        <img src="${it.img}" alt="${name}" style="width:150px;height:120px;object-fit:cover;display:block">
+        <button data-act="q:addonadd:${idx}" style="position:absolute;left:5px;right:5px;bottom:6px;font:700 9.5px/1 var(--font);white-space:nowrap;letter-spacing:-.01em;padding:7px 4px;border-radius:9px;border:0;cursor:pointer;background:#fff;color:${it.added?'#07794C':'var(--purple)'};box-shadow:0 3px 10px rgba(0,0,0,.4)">${it.added?'✓ Added':'Add paint'} · ${inr(it.price)}</button>
+      </div>`;
+    }).join('');
+    return `<div style="margin-bottom:18px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span class="q-ic" style="width:30px;height:30px">${d.icon}</span>
+        <span style="font-weight:700;font-size:15px">${name} <span style="color:var(--ink-3);font-weight:600;font-size:13px">· ${list.length} found</span></span>
+      </div>
+      <div style="display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px">${tiles}</div>
     </div>`;
   }).join('');
 }
@@ -1187,7 +1213,7 @@ function route(a){
   if(a==='q:closecontract'){ closeContract(); return; }
   if(a==='q:addons'){ openAddons(); return; }
   if(a==='q:closeaddons'){ closeAddons(); return; }
-  if(a.startsWith('q:addon:')){ const p=a.split(':'); const key=p[2], op=p[3]; if(op==='inc') addonInc(key); else addonDec(key); refreshAddons(); renderRooms(); refreshSummary(); refreshFooter(); return; }
+  if(a.startsWith('q:addonadd:')){ const i=+a.slice(11); const items=addonItems(); if(items[i]) items[i].added=!items[i].added; recomputeAddonQty(); refreshAddons(); renderRooms(); refreshSummary(); refreshFooter(); return; }
   if(a.startsWith('q:repairs:')){ openRepairsSheet(a.slice(10)); return; }
   if(a==='q:closerepairs'){ closeRepairsSheet(); return; }
   if(a.startsWith('q:why:')){ const el = document.getElementById('why-' + a.slice(6)); if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none'; return; }
