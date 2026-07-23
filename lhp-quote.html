@@ -47,21 +47,29 @@ img,svg{display:block}
 .topbar .back svg{width:20px;height:20px}
 .topbar .back:active{background:var(--bg-soft)}
 .topbar h1{font-size:16px;font-weight:700;letter-spacing:-.01em;flex:1}
-.badge-offer{font-size:11.5px;font-weight:700;color:#fff;background:var(--purple);padding:5px 10px;border-radius:999px;white-space:nowrap}
+.badge-offer{font-size:12px;font-weight:800;color:#fff;background:#0E9488;padding:6px 13px;border-radius:999px;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;transform-origin:center;animation:contractPulse 2.2s ease-in-out infinite}
+.badge-offer svg{width:13px;height:13px}
+.badge-offer:active{transform:scale(.95);animation:none}
+@keyframes contractPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+@media (prefers-reduced-motion:reduce){.badge-offer{animation:none}}
 .scroll{flex:1;overflow-y:auto;padding:16px 16px 120px}
 
 /* ── summary card ── */
 .q-summary{background:#fff;border:1px solid var(--line-soft);border-radius:18px;padding:16px 16px 18px;box-shadow:var(--shadow-soft)}
-.q-sum-h{font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);margin-bottom:12px}
+.q-sum-h{font-size:14.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);margin-bottom:12px}
 .q-sum-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.q-sum-edit{font-size:12.5px;font-weight:600;color:var(--purple);text-decoration:underline;text-underline-offset:3px}
+.q-sum-edit{font-size:13px;font-weight:700;color:var(--purple);display:inline-flex;align-items:center;gap:3px}
+.q-sum-edit svg{width:15px;height:15px}
 .gp-sub{font-size:13px;font-weight:600;color:var(--ink);margin:0 2px 8px}
 .gp-special{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 2px;border:0;border-bottom:1px solid var(--line-soft);background:none;font-weight:700;font-size:14px;color:var(--ink);text-align:left}
 .gp-special:active{opacity:.6}
-.q-cat{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:9px 0;font-size:14px}
-.q-cat .lab{color:var(--ink);font-weight:700}
+.q-cat{display:flex;align-items:center;gap:12px;padding:12px 0;font-size:14px;border-bottom:1px solid var(--line-soft,#F0F0F3)}
+.q-cat:last-of-type{border-bottom:0}
+.q-cat-ic{width:24px;height:24px;flex:0 0 auto;border-radius:7px;background:var(--purple-tint);display:flex;align-items:center;justify-content:center}
+.q-cat-ic svg{width:14px;height:14px;stroke:var(--purple);fill:none}
+.q-cat .lab{flex:1;min-width:0;color:var(--ink);font-weight:700}
 .q-cat-sub{display:block;font-size:11.5px;color:var(--ink-3);font-weight:600;line-height:1.4;margin-top:3px}
-.q-cat .amt{font-weight:700;font-variant-numeric:tabular-nums}
+.q-cat .amt{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
 .q-div{height:1px;background:var(--line);margin:11px 0}
 .q-line{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:3px 0;font-variant-numeric:tabular-nums}
 .q-full .amt{font-weight:700}
@@ -433,9 +441,16 @@ function bindActs(scope){ scope.querySelectorAll('[data-act]').forEach(b=> b.onc
 
 function summaryInner(){
   const t = quoteTotals(QUOTE);
-  const cats = t.categories.map(c=>`<div class="q-cat"><span class="lab">${c.label}${c.rec?` <span style="font-size:10px;font-weight:700;color:var(--red,#E23B3B);background:#FDECEC;padding:2px 7px;border-radius:999px;white-space:nowrap">Highly recommended</span> <button data-act="q:why:${c.key}" style="border:0;background:none;cursor:pointer;color:var(--ink-3);font-size:13px;padding:0;vertical-align:middle" aria-label="Why this matters">ⓘ</button>`:''}${c.sub?`<span class="q-cat-sub">${c.sub}</span>`:''}${c.rec&&c.why?`<span id="why-${c.key}" style="display:none;font-size:11.5px;color:var(--ink-2);background:#FDECEC;border-radius:9px;padding:9px 11px;margin-top:7px;line-height:1.5">${c.why}</span>`:''}</span><span class="amt">${c.rec?`<button data-act="q:repairs:${c.key}" style="border:1.5px solid var(--purple);background:#fff;color:var(--purple);font-weight:700;font-size:12.5px;padding:5px 13px;border-radius:999px;cursor:pointer">Add</button>`:inr(c.amount)}</span></div>`).join('');
+  const CAT_IC = {
+    interior:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="13" height="6" rx="1.5"/><path d="M17 7h2.6A1.4 1.4 0 0 1 21 8.4V10a1.4 1.4 0 0 1-1.4 1.4H12a1 1 0 0 0-1 1V15"/><rect x="9" y="15" width="4" height="6" rx="1.2"/></svg>',
+    exterior:I.frame,
+    damages:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.6-3 7.7-7 9-4-1.3-7-4.4-7-9V6z"/></svg>',
+    wproof:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg>',
+    door:I.door, window:I.window, grill:I.grill, cabinet:I.cabinet,
+  };
+  const cats = t.categories.map(c=>`<div class="q-cat"><span class="q-cat-ic">${CAT_IC[c.key]||I.dot}</span><span class="lab">${c.label}${c.rec?` <span style="font-size:10px;font-weight:700;color:var(--red,#E23B3B);background:#FDECEC;padding:2px 7px;border-radius:999px;white-space:nowrap">Highly recommended</span> <button data-act="q:why:${c.key}" style="border:0;background:none;cursor:pointer;color:var(--ink-3);font-size:13px;padding:0;vertical-align:middle" aria-label="Why this matters">ⓘ</button>`:''}${c.sub?`<span class="q-cat-sub">${c.sub}</span>`:''}</span><span class="amt">${c.rec?`<button data-act="q:repairs:${c.key}" style="border:1.5px solid var(--purple);background:#fff;color:var(--purple);font-weight:700;font-size:12.5px;padding:5px 13px;border-radius:999px;cursor:pointer">Add</button>`:inr(c.amount)}</span></div>`).join('');
   const nWalls = (QUOTE.scan && QUOTE.scan.walls) || 45;
-  return `<div class="q-sum-top"><span class="q-sum-h" style="margin:0">Your quote <button data-act="q:report" style="border:0;background:none;padding:0;cursor:pointer;color:var(--purple);font-weight:700;font-size:13px;text-decoration:underline;text-underline-offset:2px;vertical-align:middle">· ${nWalls} walls</button></span><button class="q-sum-edit" data-act="q:editpaint">Change paint</button></div>
+  return `<div class="q-sum-top"><span class="q-sum-h" style="margin:0">Your quote <button data-act="q:report" style="border:0;background:none;padding:0;cursor:pointer;color:var(--purple);font-weight:700;font-size:14.5px;text-transform:none;letter-spacing:0;vertical-align:middle">· ${nWalls} walls</button></span><button class="q-sum-edit" data-act="q:editpaint">Change paint<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button></div>
     ${cats}
     <div class="q-div"></div>
     <div class="q-line q-full"><span class="lab">Full price</span><span class="amt">${inr(t.full)}</span></div>
@@ -553,7 +568,7 @@ function processPromiseInner(){
 }
 function renderQuotePage(){
   app().innerHTML = `
-    <div class="topbar"><button class="back" data-act="q:back" aria-label="Back">${I.back}</button><h1>Your painting quote</h1><button class="badge-offer" data-act="q:contract">Your Contract</button></div>
+    <div class="topbar"><button class="back" data-act="q:back" aria-label="Back">${I.back}</button><h1>Your painting quote</h1><button class="badge-offer" data-act="q:contract"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>Your Contract</button></div>
     <div class="scroll" id="qscroll">
       <div class="q-summary" id="q-summary">${summaryInner()}</div>
       <div class="q-addrow" id="q-addrow">${addButtonsInner()}</div>
@@ -688,6 +703,26 @@ function openContract(){
   bindActs(ov);
 }
 function closeContract(){ const el=document.getElementById('qContract'); if(el) el.remove(); }
+
+/* "Why this matters" bottom sheet (for the ⓘ on highly-recommended repairs) */
+function openWhySheet(title, why){
+  if(document.getElementById('qWhy')) return;
+  const ov=document.createElement('div'); ov.className='sheet-ov'; ov.id='qWhy';
+  ov.innerHTML=`<div class="sheet" role="dialog" aria-label="Why this matters">
+    <div class="sheet-grab"></div>
+    <div style="display:flex;align-items:center;gap:10px;margin:0 2px 10px">
+      <span style="width:34px;height:34px;border-radius:10px;flex:0 0 auto;background:#FDECEC;color:#E23B3B;display:flex;align-items:center;justify-content:center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg></span>
+      <div><div style="font-size:16px;font-weight:700">Why ${title.replace(/ ×.*$/,'')} matters</div></div>
+    </div>
+    <div style="font-size:13.5px;color:var(--ink-2);line-height:1.55;margin:0 2px">${why}</div>
+    <button class="confirm-cancel" data-act="q:closewhy" style="width:100%;margin-top:16px">Got it</button>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', e=>{ if(e.target===ov) closeWhySheet(); });
+  bindActs(ov);
+  requestAnimationFrame(()=>ov.classList.add('open'));
+}
+function closeWhySheet(){ const s=document.getElementById('qWhy'); if(s){ s.classList.remove('open'); setTimeout(()=>s.remove(),260); } }
 
 /* Add-ons page — the detected door / window / grill / cabinet PHOTOS, each with its
    own "Add paint · ₹" button. One item per detected photo; adding sets that room's
@@ -1229,7 +1264,8 @@ function route(a){
   if(a.startsWith('q:addonadd:')){ const i=+a.slice(11); const items=addonItems(); if(items[i]) items[i].added=!items[i].added; recomputeAddonQty(); refreshAddons(); renderRooms(); refreshSummary(); refreshFooter(); return; }
   if(a.startsWith('q:repairs:')){ openRepairsSheet(a.slice(10)); return; }
   if(a==='q:closerepairs'){ closeRepairsSheet(); return; }
-  if(a.startsWith('q:why:')){ const el = document.getElementById('why-' + a.slice(6)); if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none'; return; }
+  if(a.startsWith('q:why:')){ const key = a.slice(6); const cat = quoteTotals(QUOTE).categories.find(c=>c.key===key); if(cat && cat.why) openWhySheet(cat.label, cat.why); return; }
+  if(a==='q:closewhy'){ closeWhySheet(); return; }
   if(a.startsWith('q:addfix:')){ doAddFix(a.slice(9)); return; }
   if(a.startsWith('q:repadd:')){ const i=+a.slice(9); const items=repairItems(); if(items[i]) items[i].added=!items[i].added; refreshRepairsSheet(); refreshSummary(); refreshFooter(); return; }
   if(a.startsWith('qed:'))  return qEdit(a);
