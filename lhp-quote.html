@@ -622,14 +622,27 @@ function closeRoomGallery(){ const el=document.getElementById('qGallery'); if(el
 /* Full "Your home, room by room" analysis — read-only room cards (icon, ticked
    services, photo grid). Opened from the rotating home icon and the "45 walls" link. */
 function reportRoomCard(r){
-  const all = [].concat(r.photos.walls, r.photos.door, r.photos.grill, r.photos.cabinet, r.photos.bathroom).filter(Boolean);
-  const thumbs = all.slice(0,6).map(p=>`<img src="${p.src}" alt="" style="width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:10px;display:block">`).join('');
+  // every captured image for this space, labelled by what it is
+  const GROUPS = [
+    { key:'walls',    label:'Painted wall' },
+    { key:'door',     label:'Door' },
+    { key:'window',   label:'Window' },
+    { key:'grill',    label:'Grill' },
+    { key:'cabinet',  label:'Cabinet' },
+    { key:'bathroom', label:'Bathroom' },
+  ];
+  const tiles = [];
+  GROUPS.forEach(g => (r.photos[g.key] || []).forEach(p => { if(p && p.src) tiles.push(
+    `<div style="position:relative;border-radius:10px;overflow:hidden;background:#000">
+       <img src="${p.src}" alt="${g.label}" style="width:100%;aspect-ratio:1/1;object-fit:cover;display:block">
+       <span style="position:absolute;left:5px;bottom:5px;font:700 8.5px/1 var(--font);color:#fff;background:rgba(15,15,25,.62);padding:3px 6px;border-radius:5px">${g.label}</span>
+     </div>`); }));
   return `<div class="q-room">
     <div class="q-rhead"><span class="q-ic">${roomIcon(r.name)}</span><span class="q-rname">${r.name}</span>
       <button class="q-del" data-act="q:customize:${r.id}" aria-label="Edit ${r.name}">${I.edit}</button>
       <button class="q-del" data-act="q:delroom:${r.id}" aria-label="Remove ${r.name}">${I.trash}</button></div>
     <div class="q-chips">${chipsHtml(r)}</div>
-    ${all.length?`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:11px">${thumbs}</div>`:''}
+    ${tiles.length?`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:11px">${tiles.join('')}</div>`:''}
   </div>`;
 }
 function openFullReport(){
